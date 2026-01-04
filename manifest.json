@@ -1,56 +1,21 @@
 {
-  "name": "Nexus - Nota de Vendas",
-  "short_name": "RebibosGenerator",
-  "id": "nexus-vendas-v1",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
-  "orientation": "portrait-primary",
-  "description": "Gerador profissional de recibos e notas de vendas com assinatura digital e exportação PDF.",
-  "categories": ["business", "finance", "productivity"],
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "screenshot-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Geração de Recibos Mobile"
-    },
-    {
-      "src": "screenshot-desktop.png",
-      "sizes": "1920x1080",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Painel de Controle Desktop"
-    }
-  ]
+    "name": "Nexus - Nota de Vendas",
+    "short_name": "RecibosGenerator",
+    "description": "Gerador de Recibos e Notas de Vendas Profissionais",
+    "start_url": "./Nota de vendas.html",
+    "display": "standalone",
+    "background_color": "#f1f5f9",
+    "theme_color": "#2563eb",
+    "icons": [
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
 }
-
-
