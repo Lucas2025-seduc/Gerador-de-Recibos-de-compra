@@ -3,6 +3,8 @@ const ASSETS_TO_CACHE = [
   './',
   './Nota de vendas.html',
   './manifest.json',
+  './icon-192.png', // Ícone padrão PWA pequeno
+  './icon-512.png', // Ícone padrão PWA grande
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
