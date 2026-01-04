@@ -1,7 +1,7 @@
 const CACHE_NAME = 'nexus-vendas-v2'; // Atualizado para v2 para garantir que os ícones sejam baixados
 const ASSETS_TO_CACHE = [
   './',
-  './Nota de vendas.html',
+  './index.html',
   './manifest.json',
   './icon-192.png', // Deve corresponder exatamente ao nome do arquivo na pasta
   './icon-512.png', // Deve corresponder exatamente ao nome do arquivo na pasta
@@ -47,3 +47,4 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
