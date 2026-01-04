@@ -1,6 +1,6 @@
 {
     "name": "Nexus - Nota de Vendas",
-    "short_name": "RecibosGeneretor",
+    "short_name": "Nexus",
     "description": "Emissor de recibos e notas de venda profissional",
     "start_url": "./Nota de vendas.html",
     "display": "standalone",
