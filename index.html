@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus - Nota de Vendas</title>
     
-    <!-- Link para o Manifesto Externo -->
-    <link rel="manifest" href="manifest.json">
+    <!-- Link para o Manifesto Externo (Nome corrigido para manifest.json) -->
+    <link rel="manifest" href="./manifest.json">
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -28,7 +28,10 @@
     <meta name="theme-color" content="#1e293b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Nexus">
+    <meta name="apple-mobile-web-app-title" content="Nexus Vendas">
+
+    <!-- Ícones para iOS (Adicione isso se quiser suporte melhor no iPhone) -->
+    <link rel="apple-touch-icon" href="./icon-192.png">
 
     <style>
         /* Estilos de Impressão e Scrollbar */
@@ -58,10 +61,8 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #64748b; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #475569; }
         
-        /* Previne zoom no input em iOS */
         input, select, textarea { font-size: 16px !important; }
 
-        /* Loader */
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #3498db;
@@ -77,7 +78,6 @@
         
         body { overflow-y: auto; }
 
-        /* Animações Toast/Modal */
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -96,7 +96,7 @@
     <script type="text/babel">
         const { useState, useRef, useEffect, useMemo } = React;
 
-        // --- MENSAGENS TOAST (Simples) ---
+        // --- MENSAGENS TOAST ---
         const showToast = (message, type = 'success') => {
             const toast = document.createElement('div');
             toast.className = `fixed top-4 right-4 z-[9999] px-6 py-3 rounded-lg shadow-xl text-white font-bold text-sm animate-slide-in flex items-center gap-2 ${type === 'error' ? 'bg-red-500' : 'bg-green-600'}`;
@@ -124,7 +124,6 @@
         const Trash2 = (props) => <IconBase {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>;
         const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></IconBase>;
         const Palette = (props) => <IconBase {...props}><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></IconBase>;
-        const Type = (props) => <IconBase {...props}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></IconBase>;
         const Layout = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></IconBase>;
         const Eraser = (props) => <IconBase {...props}><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></IconBase>;
         const ImageIcon = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></IconBase>;
@@ -156,13 +155,10 @@
         const History = (props) => <IconBase {...props}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></IconBase>;
         const Globe = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></IconBase>;
         const Clock = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>;
-        const X = (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>;
-        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconBase>;
         const ArrowLeft = (props) => <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></IconBase>;
         const Facebook = (props) => <IconBase {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></IconBase>;
         const Instagram = (props) => <IconBase {...props}><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></IconBase>;
         const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
-
 
         // --- CONSTANTES ---
         const APP_SECRET = "NEXUS_VENDAS_2025_SECRET_KEY_LucasSilva"; 
@@ -327,16 +323,11 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); 
             const [showShareMenu, setShowShareMenu] = useState(false); 
-            const [discount, setDiscount] = useState(0); // Novo Estado para Desconto
+            const [discount, setDiscount] = useState(0);
 
-            // PWA Install State
-            const [installPrompt, setInstallPrompt] = useState(null);
-
-            // Multi-Profile State
             const [profiles, setProfiles] = useState([]);
             const [activeProfileId, setActiveProfileId] = useState(null);
 
-            // Estado Inicial Vazio com Novos Campos
             const [company, setCompany] = useState({
                 name: '', docType: 'CNPJ', doc: '',
                 address: '', phone: '', email: '',
@@ -347,7 +338,7 @@
                 socialType: 'website' 
             });
             const [controlNumber, setControlNumber] = useState(String(Math.floor(Date.now() / 1000)));
-            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' }); // Adicionado docType
+            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' });
             const [footerMessage, setFooterMessage] = useState(FOOTER_PRESETS[1]);
             const [items, setItems] = useState([{ id: 1, description: '', qtd: 1, price: 0 }]);
             
@@ -436,7 +427,6 @@
                 }
             };
 
-            // Canvas wrapper functions
             const startDrawing = (e) => startDraw(e, canvasRef, setIsDrawing);
             const draw = (e) => doDraw(e, canvasRef, isDrawing);
             const stopDrawing = () => stopDraw(canvasRef, setSignature, setIsDrawing);
@@ -471,7 +461,6 @@
                 localStorage.setItem('nexus_receipts_history', JSON.stringify(updatedHistory));
             };
 
-            // --- PROFILE MANAGEMENT ---
             const saveProfile = () => {
                 if (!company.name) {
                     showToast("Digite o nome da empresa para salvar.", "error");
@@ -479,7 +468,7 @@
                 }
 
                 const profileData = {
-                    company: { ...company, date: null, time: null }, // Don't save date/time
+                    company: { ...company, date: null, time: null }, 
                     signature,
                     design
                 };
@@ -489,7 +478,6 @@
 
                 try {
                     if (activeProfileId) {
-                        // Update existing
                         updatedProfiles = profiles.map(p => 
                             p.id === activeProfileId 
                             ? { ...p, ...profileData, name: company.name, updatedAt: new Date().toISOString() } 
@@ -497,7 +485,6 @@
                         );
                         showToast("Perfil atualizado com sucesso!");
                     } else {
-                        // Create new
                         newId = Date.now().toString();
                         const newProfile = { 
                             id: newId, 
@@ -508,12 +495,9 @@
                         updatedProfiles = [...profiles, newProfile];
                         showToast("Nova empresa salva com sucesso!");
                     }
-
-                    // Attempt to save to localStorage (handle quota limits)
                     localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setProfiles(updatedProfiles);
                     setActiveProfileId(newId);
-
                 } catch (e) {
                     if (e.name === 'QuotaExceededError') {
                         showToast("Espaço cheio! Tente usar imagens menores ou apagar perfis antigos.", "error");
@@ -528,7 +512,6 @@
                     setActiveProfileId(null);
                     return;
                 }
-
                 const profile = profiles.find(p => p.id === id);
                 if (profile) {
                     confirmAction("Carregar este perfil substituirá os dados atuais do emissor. Continuar?", () => {
@@ -536,7 +519,6 @@
                             setCompany(prev => ({
                                 ...prev, 
                                 ...profile.company, 
-                                // Preserve current date/time
                                 date: new Date().toISOString().split('T')[0],
                                 time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                             }));
@@ -599,7 +581,6 @@
                 showToast("Recibo salvo no histórico!"); 
             };
             
-            // --- COPY FALLBACK FUNCTION ---
             const copyToClipboard = (text) => {
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -637,7 +618,6 @@
                 document.body.removeChild(textArea);
             };
 
-            // --- PDF Generation and Sharing Logic ---
             const generatePDFBlob = async () => {
                 const { jsPDF } = window.jspdf;
                 const pages = document.querySelectorAll('.receipt-page');
@@ -806,8 +786,8 @@
                     deviceId, 
                     receiptCount, 
                     savedReceipts, 
-                    company, // Dados atuais da tela
-                    profiles // Lista de todas as empresas salvas
+                    company,
+                    profiles
                 }; 
                 const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' }); 
                 const url = URL.createObjectURL(blob); 
@@ -825,22 +805,15 @@
                 reader.onload = (ev) => { 
                     try { 
                         const imported = JSON.parse(ev.target.result); 
-                        
-                        // Importar Histórico de Recibos
                         if (imported.savedReceipts) { 
                             setSavedReceipts(imported.savedReceipts); 
                             localStorage.setItem('nexus_receipts_history', JSON.stringify(imported.savedReceipts)); 
                         } 
-                        
-                        // Importar Perfis de Empresas (Adicionado)
                         if (imported.profiles) {
                             setProfiles(imported.profiles);
                             localStorage.setItem('nexus_company_profiles', JSON.stringify(imported.profiles));
                         }
-
-                        // Importar dados da tela atual (opcional, mas bom para continuidade)
                         if (imported.company) setCompany(imported.company); 
-                        
                         showToast("Dados e empresas importados com sucesso!"); 
                         setShowSettingsModal(false); 
                     } catch(err) { 
@@ -859,18 +832,7 @@
                     default: return <Globe size={size} className="inline"/>;
                 }
             };
-            
-            // --- PWA INSTALL HANDLER ---
-            const handleInstallApp = async () => {
-                if (!installPrompt) return;
-                installPrompt.prompt();
-                const { outcome } = await installPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    setInstallPrompt(null);
-                }
-            };
 
-            // --- EFFECTS ---
             useEffect(() => {
                 let storedId = localStorage.getItem('nexus_device_id');
                 if (!storedId) {
@@ -883,7 +845,6 @@
                 setReceiptCount(parseInt(localStorage.getItem('nexus_receipt_count') || '0'));
                 try { setSavedReceipts(JSON.parse(localStorage.getItem('nexus_receipts_history')) || []); } catch(e) {}
 
-                // Load Company Profiles (Multi-profile Support)
                 try {
                     const savedProfiles = localStorage.getItem('nexus_company_profiles');
                     let profilesList = [];
@@ -891,7 +852,6 @@
                     if (savedProfiles) {
                         profilesList = JSON.parse(savedProfiles);
                     } else {
-                        // Migration from old single profile system
                         const legacyProfile = localStorage.getItem('nexus_company_profile');
                         if (legacyProfile) {
                             const parsed = JSON.parse(legacyProfile);
@@ -903,10 +863,7 @@
                             };
                             profilesList = [newProfile];
                             localStorage.setItem('nexus_company_profiles', JSON.stringify(profilesList));
-                            // Optional: Remove old key
-                            // localStorage.removeItem('nexus_company_profile'); 
                             
-                            // Auto-load the migrated profile
                             setCompany(prev => ({ ...prev, ...parsed.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
                             if(parsed.signature) setSignature(parsed.signature);
                             if(parsed.design) setDesign(parsed.design);
@@ -936,24 +893,19 @@
 
                 window.addEventListener('resize', handleResize);
                 
-                // PWA INSTALL LISTENER
-                const handleBeforeInstallPrompt = (e) => {
-                    e.preventDefault();
-                    setInstallPrompt(e);
-                };
-                window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-                
-                // REGISTER SERVICE WORKER
-                // Only register if served over HTTP/HTTPS to avoid errors in local/blob previews
+                // SERVICE WORKER REGISTRATION - Atualizado
                 if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
-                    navigator.serviceWorker.register('service-worker.js')
-                    .then(reg => console.log('Service Worker registrado!', reg))
-                    .catch(err => console.warn('Falha no registro do SW (pode ser ignorado em desenvolvimento):', err));
+                    navigator.serviceWorker.register('./service-worker.js') // Caminho explícito
+                    .then(reg => {
+                        console.log('Service Worker registrado!', reg);
+                        // Tentar atualizar se houver nova versão
+                        reg.update();
+                    })
+                    .catch(err => console.warn('Falha no registro do SW:', err));
                 }
                 
                 return () => {
                     window.removeEventListener('resize', handleResize);
-                    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
                     resizeObserver.disconnect();
                 };
             }, []);
@@ -1001,9 +953,9 @@
                 const CHARS_PER_LINE = 38; 
                 const LINE_WEIGHT = 1;     
                 
-                const MAX_WEIGHT_FIRST_PAGE = 20; // Capacidade segura da P1
-                const MAX_WEIGHT_OTHER_PAGE = 27; // Capacidade segura da P2+
-                const FOOTER_WEIGHT = 11; // Aumentado de 8 para 11 (Rodapé é "pesado")
+                const MAX_WEIGHT_FIRST_PAGE = 20; 
+                const MAX_WEIGHT_OTHER_PAGE = 27; 
+                const FOOTER_WEIGHT = 11; 
 
                 let generatedPages = [];
                 let currentItems = [];
@@ -1042,10 +994,8 @@
 
             // --- RENDER ---
             return (
-                /* CORREÇÃO APLICADA AQUI: Em mobile (padrão), usamos min-h-screen. Em Desktop (lg:), usamos h-screen e overflow-hidden para o efeito "app" */
                 <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'min-h-screen lg:h-screen lg:overflow-hidden'}`}>
                     
-                    {/* LOADING OVERLAY */}
                     {isGeneratingPdf && (
                         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
                             <div className="loader mb-4"></div>
@@ -1054,7 +1004,6 @@
                         </div>
                     )}
 
-                    {/* MODAL CONFIG */}
                     {showSettingsModal && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
                             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
@@ -1075,10 +1024,6 @@
                                         <button type="button" onClick={() => fileInputImportRef.current.click()} className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group"><Upload className="text-slate-400 group-hover:text-emerald-500" size={24} /><span className="text-sm font-medium text-slate-700 group-hover:text-emerald-700">Importar Dados</span><input type="file" ref={fileInputImportRef} className="hidden" accept=".json" onChange={importData} /></button>
                                     </div>
                                 </div>
-                                <div className="mt-8 pt-6 border-t border-slate-100">
-                                     <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2"><Smartphone className="text-slate-500" size={16}/> Instalação no iPhone</h3>
-                                     <p className="text-xs text-slate-500">Para instalar no iOS, toque no botão de <strong>Partilha</strong> do Safari e escolha <strong>"Adicionar ao Ecrã Principal"</strong>.</p>
-                                </div>
                             </div>
                         </div>
                     )}
@@ -1094,7 +1039,6 @@
                                 <span className="text-xs font-medium text-indigo-700">Nota de Venda</span>
                                 <span className="hidden sm:inline text-slate-300">|</span>
                                 
-                                {/* Status da Licença / Créditos */}
                                 {!isLicensed ? (
                                     <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${remainingCredits > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                                         <Lock size={10} />
@@ -1121,20 +1065,7 @@
                                 <button type="button" onClick={() => setActiveTab('history')} className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Histórico"><History size={18}/><span className="text-xs font-bold hidden sm:inline">Histórico</span></button>
                             </div>
                             
-                            <div className="relative flex items-center gap-2">
-                                {/* BOTÃO INSTALAR PWA (Só aparece se o navegador permitir) */}
-                                {installPrompt && (
-                                    <button 
-                                        type="button" 
-                                        onClick={handleInstallApp} 
-                                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 animate-pulse shadow-sm"
-                                        title="Instalar App no Dispositivo"
-                                    >
-                                        <Download size={18} />
-                                        <span className="hidden sm:inline">Instalar App</span>
-                                    </button>
-                                )}
-
+                            <div className="relative">
                                 <button 
                                     type="button" 
                                     onClick={() => isLicensed || receiptCount < 1 ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} 
@@ -1286,8 +1217,6 @@
                                     </EditorSection>
 
                                     <EditorSection title="Emissor & Logo" icon={Building2} colorClass="bg-blue-500" borderColorClass="border-blue-500" className="h-fit">
-                                        
-                                        {/* Multi-Company Management Section */}
                                         <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 mb-4">
                                             <div className="flex justify-between items-center mb-2">
                                                 <div className="flex items-center gap-1.5 text-blue-800">
@@ -1521,7 +1450,6 @@
                                     </div>
 
                                     <div className="w-full h-full overflow-auto flex justify-center items-start custom-scrollbar">
-                                        {/* Reduzi o gap visual entre páginas de 20px para 10px */}
                                         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '50px' }} className="print:transform-none print:gap-0 print:p-0">
                                             {pages.map((page) => (
                                                 <div key={page.pageIndex} className="receipt-page shadow-2xl bg-white relative flex flex-col print:shadow-none transition-colors duration-300"
@@ -1533,7 +1461,6 @@
                                                             <div className="flex gap-5 items-center flex-1 pr-4">
                                                                 {company.logo && (<div className="flex-shrink-0" style={{ width: `${company.logoWidth}px` }}><img src={company.logo} alt="Logo" className="object-contain w-full" style={{ opacity: company.logoOpacity / 100, maxHeight: '100px' }} /></div>)}
                                                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                                    {/* Cabeçalho Uniformizado e Otimizado */}
                                                                     <h1 className="text-xl font-extrabold uppercase tracking-tight mb-2 leading-none">{company.name || 'NOME DA EMPRESA'}</h1>
                                                                     
                                                                     <div className="flex flex-wrap gap-x-3 text-xs font-medium opacity-90 mb-2 items-center">
