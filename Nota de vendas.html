@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nexus - Nota de Vendas</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel para JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Bibliotecas para PDF (html2canvas e jsPDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Fontes Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Quicksand:wght@400;600;700&family=Merriweather:wght@300;400;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Estilos de Impressão e Scrollbar */
+        @media print {
+            @page { margin: 0; size: A4; }
+            body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .receipt-page { 
+                box-shadow: none !important; 
+                width: 210mm !important; 
+                height: 297mm !important; 
+                padding: 10mm 20mm 20mm 20mm !important;
+                margin: 0 !important;
+                break-after: page; 
+                page-break-after: always;
+                transform: none !important;
+                overflow: hidden !important; 
+                border: none !important;
+            }
+            .receipt-page:last-child { break-after: auto; page-break-after: auto; }
+            body > *:not(#root) { display: none; }
+            #root { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+            .no-print, header, footer, button, .print-hidden, .toast-container, .modal-overlay { display: none !important; }
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #64748b; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #475569; }
+        
+        /* Previne zoom no input em iOS */
+        input, select, textarea { font-size: 16px !important; }
+
+        /* Loader */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        body { overflow-y: auto; }
+
+        /* Animações Toast/Modal */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+    <div id="root" class="h-screen w-full flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect, useMemo } = React;
+
+        // --- ÍCONES ---
+        const IconBase = ({ children, size = 24, className = "", ...props }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
+        );
+
+        const Printer = (props) => <IconBase {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></IconBase>;
+        const Plus = (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></IconBase>;
+        const Trash2 = (props) => <IconBase {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>;
+        const Upload = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></IconBase>;
+        const Palette = (props) => <IconBase {...props}><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></IconBase>;
+        const Type = (props) => <IconBase {...props}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></IconBase>;
+        const Layout = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></IconBase>;
+        const Eraser = (props) => <IconBase {...props}><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></IconBase>;
+        const ImageIcon = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></IconBase>;
+        const UserCheck = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/></IconBase>;
+        const CheckCircle2 = (props) => <IconBase {...props}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const Settings = (props) => <IconBase {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const MessageSquare = (props) => <IconBase {...props}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></IconBase>;
+        const Hash = (props) => <IconBase {...props}><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></IconBase>;
+        const Share2 = (props) => <IconBase {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></IconBase>;
+        const Mail = (props) => <IconBase {...props}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></IconBase>;
+        const Smartphone = (props) => <IconBase {...props}><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></IconBase>;
+        const MapPin = (props) => <IconBase {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></IconBase>;
+        const ShieldCheck = (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const Building2 = (props) => <IconBase {...props}><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></IconBase>;
+        const PenTool = (props) => <IconBase {...props}><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></IconBase>;
+        const Columns2 = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="3" x2="12" y2="21"/></IconBase>;
+        const Rows = (props) => <IconBase {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="12" x2="21" y2="12"/></IconBase>;
+        const ZoomIn = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></IconBase>;
+        const ZoomOut = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></IconBase>;
+        const CalendarDays = (props) => <IconBase {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></IconBase>;
+        const Lock = (props) => <IconBase {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>;
+        const Copy = (props) => <IconBase {...props}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></IconBase>;
+        const Save = (props) => <IconBase {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></IconBase>;
+        const Download = (props) => <IconBase {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></IconBase>;
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></IconBase>;
+        const DollarSign = (props) => <IconBase {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></IconBase>;
+        const List = (props) => <IconBase {...props}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></IconBase>;
+        const History = (props) => <IconBase {...props}><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></IconBase>;
+        const Globe = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></IconBase>;
+        const Clock = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>;
+        const X = (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></IconBase>;
+        const AlertCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconBase>;
+        const ArrowLeft = (props) => <IconBase {...props}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></IconBase>;
+        const Facebook = (props) => <IconBase {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></IconBase>;
+        const Instagram = (props) => <IconBase {...props}><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></IconBase>;
+        const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
+
+
+        // --- CONSTANTES ---
+        const APP_SECRET = "NEXUS_VENDAS_2025_SECRET_KEY_LucasSilva"; 
+
+        const FONTS = [
+            { name: 'Moderna (Inter)', family: "'Inter', sans-serif" },
+            { name: 'Corporativa (Roboto)', family: "'Roboto', sans-serif" },
+            { name: 'Geométrica (Poppins)', family: "'Poppins', sans-serif" },
+            { name: 'Elegante (Playfair)', family: "'Playfair Display', serif" },
+            { name: 'Sofisticada (Montserrat)', family: "'Montserrat', sans-serif" },
+            { name: 'Editorial (Lora)', family: "'Lora', serif" },
+            { name: 'Aberta (Open Sans)', family: "'Open Sans', sans-serif" },
+            { name: 'Técnica (JetBrains)', family: "'JetBrains Mono', monospace" },
+            { name: 'Amigável (Quicksand)', family: "'Quicksand', sans-serif" },
+            { name: 'Clássica (Merriweather)', family: "'Merriweather', serif" },
+        ];
+
+        const THEMES = [
+            { id: 'classic_light', name: 'Azul Clean', primary: '#2563eb', secondary: '#eff6ff', text: '#1e293b', bg: '#ffffff', headerBg: '#eff6ff', headerText: '#1e293b' },
+            { id: 'classic_bold', name: 'Azul Bold', primary: '#2563eb', secondary: '#f8fafc', text: '#1e293b', bg: '#ffffff', headerBg: '#2563eb', headerText: '#ffffff' },
+            { id: 'emerald_light', name: 'Verde Natureza', primary: '#059669', secondary: '#ecfdf5', text: '#064e3b', bg: '#ffffff', headerBg: '#ecfdf5', headerText: '#064e3b' },
+            { id: 'emerald_bold', name: 'Verde Intenso', primary: '#059669', secondary: '#f0fdf4', text: '#064e3b', bg: '#ffffff', headerBg: '#059669', headerText: '#ffffff' },
+            { id: 'slate_pro', name: 'Cinza Pro', primary: '#475569', secondary: '#f1f5f9', text: '#1e293b', bg: '#ffffff', headerBg: '#1e293b', headerText: '#ffffff' },
+            { id: 'midnight', name: 'Meia Noite', primary: '#0f172a', secondary: '#e2e8f0', text: '#1e293b', bg: '#ffffff', headerBg: '#0f172a', headerText: '#f8fafc' },
+            { id: 'sunset', name: 'Pôr do Sol', primary: '#ea580c', secondary: '#fff7ed', text: '#431407', bg: '#ffffff', headerBg: '#fff7ed', headerText: '#7c2d12' },
+            { id: 'rose', name: 'Rose Gold', primary: '#e11d48', secondary: '#fff1f2', text: '#881337', bg: '#ffffff', headerBg: '#e11d48', headerText: '#ffffff' },
+            { id: 'purple', name: 'Criativo', primary: '#7c3aed', secondary: '#f5f3ff', text: '#4c1d95', bg: '#ffffff', headerBg: '#f5f3ff', headerText: '#5b21b6' },
+            { id: 'royal', name: 'Dourado Real', primary: '#b45309', secondary: '#fffbeb', text: '#451a03', bg: '#ffffff', headerBg: '#fffbeb', headerText: '#78350f' },
+            { id: 'mono', name: 'Monocromático', primary: '#000000', secondary: '#f4f4f5', text: '#18181b', bg: '#ffffff', headerBg: '#ffffff', headerText: '#000000' },
+            { id: 'ocean', name: 'Oceano', primary: '#0891b2', secondary: '#ecfeff', text: '#164e63', bg: '#ffffff', headerBg: '#0891b2', headerText: '#ffffff' },
+            { id: 'graphite_dark', name: 'Grafite Moderno', primary: '#a1a1aa', secondary: '#27272a', text: '#f4f4f5', bg: '#18181b', headerBg: '#27272a', headerText: '#f4f4f5' },
+            { id: 'sand_warm', name: 'Areia Suave', primary: '#b45309', secondary: '#fef3c7', text: '#451a03', bg: '#fffbeb', headerBg: '#fef3c7', headerText: '#451a03' },
+            { id: 'lavender_soft', name: 'Lavanda', primary: '#7e22ce', secondary: '#f3e8ff', text: '#3b0764', bg: '#faf5ff', headerBg: '#f3e8ff', headerText: '#3b0764' },
+            { id: 'mint_fresh', name: 'Menta Fresca', primary: '#15803d', secondary: '#dcfce7', text: '#14532d', bg: '#f0fdf4', headerBg: '#dcfce7', headerText: '#14532d' },
+            { id: 'navy_night', name: 'Céu Noturno', primary: '#38bdf8', secondary: '#1e293b', text: '#f8fafc', bg: '#0f172a', headerBg: '#1e293b', headerText: '#f8fafc' },
+            { id: 'peach_bloom', name: 'Pêssego', primary: '#be123c', secondary: '#ffe4e6', text: '#881337', bg: '#fff1f2', headerBg: '#ffe4e6', headerText: '#881337' },
+            { id: 'coffee_dark', name: 'Café Expresso', primary: '#fbbf24', secondary: '#451a03', text: '#fffbeb', bg: '#2a1b12', headerBg: '#451a03', headerText: '#fffbeb' },
+            { id: 'concrete_urban', name: 'Concreto Urbano', primary: '#ea580c', secondary: '#d4d4d4', text: '#171717', bg: '#f5f5f5', headerBg: '#e5e5e5', headerText: '#171717' },
+            { id: 'lemon_zest', name: 'Limão Siciliano', primary: '#a16207', secondary: '#fef9c3', text: '#422006', bg: '#fefce8', headerBg: '#fef9c3', headerText: '#422006' },
+            { id: 'berry_deep', name: 'Ameixa Real', primary: '#e879f9', secondary: '#4c1d95', text: '#f3e8ff', bg: '#2e1065', headerBg: '#4c1d95', headerText: '#f3e8ff' },
+        ];
+
+        const FOOTER_PRESETS = [
+            "Obrigado pela preferência! Volte sempre.",
+            "Documento gerado digitalmente. A validade deste recibo está condicionada à confirmação do pagamento.",
+            "Garantia de 90 dias contra defeitos de fabricação.",
+            "Favor conferir os itens no ato da entrega.",
+            "Pagamento recebido. Este documento serve como quitação dos valores acima."
+        ];
+
+        // --- UTILS ---
+        const generateLicenseHash = (deviceId) => {
+            try {
+                const rawString = deviceId + APP_SECRET;
+                let hash = 0;
+                for (let i = 0; i < rawString.length; i++) {
+                    const char = rawString.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; 
+                }
+                return Math.abs(hash).toString(16).substring(0, 8).toUpperCase();
+            } catch (e) { return "ERROR"; }
+        };
+
+        const numeroPorExtenso = (v) => {
+            v = Math.round(v * 100) / 100;
+            if (v === 0) return 'Zero reais';
+            const unidades = ["", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove", "dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+            const dezenas = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+            const centenas = ["", "cento", "duzentos", "trezentos", "quatrocentos", "quinhentos", "seiscentos", "setecentos", "oitocentos", "novecentos"];
+            let inteiro = Math.floor(v);
+            let centavos = Math.round((v - inteiro) * 100);
+            let extenso = "";
+            const converteGrupo = (n) => {
+                let str = "";
+                if (n === 100) return "cem";
+                let c = Math.floor(n / 100);
+                let d = Math.floor((n % 100) / 10);
+                let u = n % 10;
+                if (c > 0) str += centenas[c];
+                if (d > 1) { if (str) str += " e "; str += dezenas[d]; if (u > 0) str += " e " + unidades[u]; } 
+                else if (d === 1 || u > 0) { let resto = n % 100; if (str) str += " e "; str += unidades[resto]; }
+                return str;
+            };
+            if (inteiro >= 1000) { let mil = Math.floor(inteiro / 1000); inteiro = inteiro % 1000; if (mil === 1) extenso += "mil"; else extenso += converteGrupo(mil) + " mil"; if (inteiro > 0) { if (inteiro < 100 || (inteiro % 100 === 0)) extenso += " e "; else extenso += ", "; } }
+            if (inteiro > 0) extenso += converteGrupo(inteiro);
+            if (Math.floor(v) === 1) extenso += " real"; else if (Math.floor(v) > 0) extenso += " reais";
+            if (centavos > 0) { if (Math.floor(v) > 0) extenso += " e "; if (centavos === 1) extenso += "um centavo"; else extenso += converteGrupo(centavos) + " centavos"; }
+            return extenso.charAt(0).toUpperCase() + extenso.slice(1);
+        };
+
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+        const formatDate = (dateValue, city) => {
+            if (!dateValue) return city || '';
+            const parts = dateValue.split('-');
+            if (parts.length !== 3) return city || '';
+            const dateObj = new Date(parts[0], parts[1] - 1, parts[2]); 
+            if (isNaN(dateObj.getTime())) return city || '';
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return city ? `${city}, ${dateObj.toLocaleDateString('pt-BR', options)}` : dateObj.toLocaleDateString('pt-BR', options);
+        };
+
+        const removeWhiteBackground = (imageSrc, callback) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                const threshold = 200;
+                for (let i = 0; i < data.length; i += 4) { if (data[i] > threshold && data[i + 1] > threshold && data[i + 2] > threshold) { data[i + 3] = 0; } }
+                ctx.putImageData(imageData, 0, 0);
+                callback(canvas.toDataURL());
+            };
+            img.src = imageSrc;
+        };
+
+        // --- COPY FALLBACK FUNCTION ---
+        const copyToClipboard = (text) => {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert("Copiado com sucesso!");
+                    }).catch(err => {
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+            } catch (e) {
+                fallbackCopy(text);
+            }
+        };
+
+        const fallbackCopy = (text) => {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            
+            // Estilos para evitar que o elemento afete o layout
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) alert("Copiado com sucesso!");
+                else alert("Não foi possível copiar automaticamente. Por favor selecione e copie.");
+            } catch (err) {
+                alert("Erro ao copiar. Por favor selecione e copie manualmente.");
+            }
+
+            document.body.removeChild(textArea);
+        };
+
+
+        // --- COMPONENTS ---
+        const InputGroup = ({ label, children }) => (
+            <div className="space-y-1.5 w-full">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
+                {children}
+            </div>
+        );
+
+        const EditorSection = ({ title, icon: Icon, colorClass, borderColorClass, children, className = "" }) => (
+            <div className={`rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow ${className}`}>
+                <div className={`px-4 py-3 border-b border-slate-100 flex items-center gap-2 ${colorClass} bg-opacity-10`}>
+                    <div className={`p-1.5 rounded-lg ${colorClass} bg-opacity-20 text-slate-700`}>
+                        {Icon ? <Icon size={16} /> : null}
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+                </div>
+                <div className={`p-4 space-y-4 border-l-4 ${borderColorClass}`}>
+                    {children}
+                </div>
+            </div>
+        );
+
+        // --- APP ---
+        function App() {
+            const [activeTab, setActiveTab] = useState('edit');
+            const [layoutMode, setLayoutMode] = useState('side');
+            const [zoom, setZoom] = useState(0.85);
+
+            // States
+            const [deviceId, setDeviceId] = useState('');
+            const [licenseKey, setLicenseKey] = useState('');
+            const [isLicensed, setIsLicensed] = useState(false);
+            const [receiptCount, setReceiptCount] = useState(0);
+            const [savedReceipts, setSavedReceipts] = useState([]);
+            const [showSettingsModal, setShowSettingsModal] = useState(false);
+            const [inputLicense, setInputLicense] = useState('');
+            const [licenseError, setLicenseError] = useState('');
+            const [filterPeriod, setFilterPeriod] = useState('all');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); 
+            const [showShareMenu, setShowShareMenu] = useState(false); 
+            const [discount, setDiscount] = useState(0); // Novo Estado para Desconto
+
+            // Multi-Profile State
+            const [profiles, setProfiles] = useState([]);
+            const [activeProfileId, setActiveProfileId] = useState(null);
+
+            // Estado Inicial Vazio com Novos Campos
+            const [company, setCompany] = useState({
+                name: '', docType: 'CNPJ', doc: '',
+                address: '', phone: '', email: '',
+                city: '', date: new Date().toISOString().split('T')[0],
+                ie: '', im: '', website: '', 
+                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                logo: null, logoWidth: 100, logoOpacity: 100,
+                socialType: 'website' 
+            });
+            const [controlNumber, setControlNumber] = useState(String(Math.floor(Date.now() / 1000)));
+            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' }); // Adicionado docType
+            const [footerMessage, setFooterMessage] = useState(FOOTER_PRESETS[1]);
+            const [items, setItems] = useState([{ id: 1, description: '', qtd: 1, price: 0 }]);
+            
+            const [signature, setSignature] = useState({ type: 'draw', image: null });
+            const [clientSignature, setClientSignature] = useState({ type: 'draw', image: null, include: true });
+            const [design, setDesign] = useState({
+                themeId: 'classic_light', primaryColor: THEMES[0].primary, secondaryColor: THEMES[0].secondary,
+                textColor: THEMES[0].text, backgroundColor: THEMES[0].bg, headerColor: THEMES[0].headerBg, 
+                headerTextColor: THEMES[0].headerText, fontFamily: FONTS[0].family,
+            });
+            
+            const [isDrawing, setIsDrawing] = useState(false);
+            const [isClientDrawing, setIsClientDrawing] = useState(false);
+
+            const canvasRef = useRef(null);
+            const clientCanvasRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const clientFileInputRef = useRef(null);
+            const logoInputRef = useRef(null);
+            const editorRef = useRef(null);
+            const fileInputImportRef = useRef(null);
+
+            // --- CANVAS FUNCTIONS ---
+            const penColor = design.themeId.includes('dark') || design.themeId === 'midnight' ? '#ffffff' : '#000000';
+
+            const setupCanvas = (canvas, color = '#000000') => {
+                const parent = canvas.parentElement;
+                if (!parent) return;
+                const rect = parent.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.style.width = `${rect.width}px`;
+                canvas.style.height = `${rect.height}px`;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(dpr, dpr);
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = color;
+            };
+
+            const getCoordinates = (e, canvas) => {
+               const rect = canvas.getBoundingClientRect();
+               const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+               const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+               return { x, y };
+            };
+
+            const startDraw = (e, canvasRef, setIsDrawingState) => {
+                if(e.type === 'touchstart') e.preventDefault();
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.strokeStyle = penColor;
+                const { x, y } = getCoordinates(e, canvas);
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                setIsDrawingState(true);
+            };
+
+            const doDraw = (e, canvasRef, isDrawingState) => {
+                if (!isDrawingState) return;
+                if(e.type === 'touchmove') e.preventDefault();
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const { x, y } = getCoordinates(e, canvas);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            };
+
+            const stopDraw = (canvasRef, setSignatureState, setIsDrawingState) => {
+                if (canvasRef.current) {
+                    setSignatureState(prev => ({ ...prev, image: canvasRef.current.toDataURL() }));
+                }
+                setIsDrawingState(false);
+            };
+
+            const clearCanvasFn = (canvasRef, setSignatureState) => {
+                const canvas = canvasRef.current;
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                    setSignatureState(prev => ({ ...prev, image: null }));
+                }
+            };
+
+            // Canvas wrapper functions
+            const startDrawing = (e) => startDraw(e, canvasRef, setIsDrawing);
+            const draw = (e) => doDraw(e, canvasRef, isDrawing);
+            const stopDrawing = () => stopDraw(canvasRef, setSignature, setIsDrawing);
+            const clearCanvas = () => clearCanvasFn(canvasRef, setSignature);
+            
+            const startClientDrawing = (e) => startDraw(e, clientCanvasRef, setIsClientDrawing);
+            const drawClient = (e) => doDraw(e, clientCanvasRef, isClientDrawing);
+            const stopClientDrawing = () => stopDraw(clientCanvasRef, setClientSignature, setIsClientDrawing);
+            const clearClientCanvas = () => clearCanvasFn(clientCanvasRef, setClientSignature);
+
+            // --- ACTIONS ---
+            const addItem = () => setItems([...items, { id: Date.now(), description: '', qtd: 1, price: 0 }]);
+            const updateItem = (id, field, value) => setItems(prevItems => prevItems.map(i => i.id === id ? { ...i, [field]: value } : i));
+            const removeItem = (id) => setItems(prevItems => prevItems.filter(i => i.id !== id));
+            
+            const handleUpload = (e, setter) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        if(e.target === logoInputRef.current) setter(prev => ({ ...prev, logo: ev.target.result }));
+                        else removeWhiteBackground(ev.target.result, (processed) => setter(prev => ({ ...prev, image: processed, type: 'upload' })));
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const saveReceiptToHistory = (currentData) => {
+                const newReceipt = { id: Date.now().toString(), createdAt: new Date().toISOString(), company: currentData.company, client: currentData.client, items: currentData.items, total: currentData.total, controlNumber: currentData.controlNumber };
+                const updatedHistory = [newReceipt, ...savedReceipts];
+                setSavedReceipts(updatedHistory);
+                localStorage.setItem('nexus_receipts_history', JSON.stringify(updatedHistory));
+            };
+
+            // --- PROFILE MANAGEMENT ---
+            const saveProfile = () => {
+                if (!company.name) {
+                    showToast("Digite o nome da empresa para salvar.", "error");
+                    return;
+                }
+
+                const profileData = {
+                    company: { ...company, date: null, time: null }, // Don't save date/time
+                    signature,
+                    design
+                };
+
+                let updatedProfiles;
+                let newId = activeProfileId;
+
+                try {
+                    if (activeProfileId) {
+                        // Update existing
+                        updatedProfiles = profiles.map(p => 
+                            p.id === activeProfileId 
+                            ? { ...p, ...profileData, name: company.name, updatedAt: new Date().toISOString() } 
+                            : p
+                        );
+                        showToast("Perfil atualizado com sucesso!");
+                    } else {
+                        // Create new
+                        newId = Date.now().toString();
+                        const newProfile = { 
+                            id: newId, 
+                            name: company.name, 
+                            ...profileData,
+                            createdAt: new Date().toISOString() 
+                        };
+                        updatedProfiles = [...profiles, newProfile];
+                        showToast("Nova empresa salva com sucesso!");
+                    }
+
+                    // Attempt to save to localStorage (handle quota limits)
+                    localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
+                    setProfiles(updatedProfiles);
+                    setActiveProfileId(newId);
+
+                } catch (e) {
+                    if (e.name === 'QuotaExceededError') {
+                        showToast("Espaço cheio! Tente usar imagens menores ou apagar perfis antigos.", "error");
+                    } else {
+                        showToast("Erro ao salvar perfil.", "error");
+                    }
+                }
+            };
+
+            const loadProfile = (id) => {
+                if (!id) {
+                    setActiveProfileId(null);
+                    return;
+                }
+
+                const profile = profiles.find(p => p.id === id);
+                if (profile) {
+                    confirmAction("Carregar este perfil substituirá os dados atuais do emissor. Continuar?", () => {
+                        if (profile.company) {
+                            setCompany(prev => ({
+                                ...prev, 
+                                ...profile.company, 
+                                // Preserve current date/time
+                                date: new Date().toISOString().split('T')[0],
+                                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                            }));
+                        }
+                        if (profile.signature) setSignature(profile.signature);
+                        if (profile.design) setDesign(profile.design);
+                        setActiveProfileId(id);
+                        showToast(`Empresa "${profile.name}" carregada.`);
+                    });
+                }
+            };
+
+            const deleteProfile = () => {
+                if (!activeProfileId) return;
+                confirmAction("Tem certeza que deseja excluir esta empresa salva?", () => {
+                    const updatedProfiles = profiles.filter(p => p.id !== activeProfileId);
+                    setProfiles(updatedProfiles);
+                    localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
+                    setActiveProfileId(null);
+                    showToast("Perfil excluído.");
+                });
+            };
+
+            const validateLicense = () => {
+                const expected = generateLicenseHash(deviceId);
+                if (inputLicense.trim().toUpperCase() === expected) {
+                    setIsLicensed(true);
+                    setLicenseKey(expected);
+                    localStorage.setItem('nexus_license_key', expected);
+                    setLicenseError('');
+                    showToast("Licença ativada com sucesso!");
+                } else {
+                    setLicenseError("Licença inválida para este dispositivo.");
+                }
+            };
+
+            const checkUsageLimit = () => {
+                if (isLicensed) return true;
+                if (receiptCount < 1) return true;
+                setShowSettingsModal(true);
+                return false;
+            };
+
+            const incrementUsage = () => {
+                const totalCalc = items.reduce((acc, i) => acc + (i.qtd * i.price), 0);
+                saveReceiptToHistory({ company, client, items, total: totalCalc, controlNumber });
+                if (!isLicensed) {
+                    const newCount = receiptCount + 1;
+                    setReceiptCount(newCount);
+                    localStorage.setItem('nexus_receipt_count', newCount.toString());
+                }
+            };
+
+            const handlePrintAction = () => { if (checkUsageLimit()) { incrementUsage(); window.print(); } };
+            const handleSaveAction = () => { 
+                const totalCalc = items.reduce((acc, i) => acc + (i.qtd * i.price), 0); 
+                const discountVal = totalCalc * (discount / 100);
+                const finalTotal = Math.max(0, totalCalc - discountVal);
+                saveReceiptToHistory({ company, client, items, total: finalTotal, controlNumber }); 
+                showToast("Recibo salvo no histórico!"); 
+            };
+            
+            // --- COPY FALLBACK FUNCTION ---
+            const copyToClipboard = (text) => {
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(() => {
+                            showToast("Copiado com sucesso!");
+                        }).catch(err => {
+                            fallbackCopy(text);
+                        });
+                    } else {
+                        fallbackCopy(text);
+                    }
+                } catch (e) {
+                    fallbackCopy(text);
+                }
+            };
+
+            const fallbackCopy = (text) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.top = "0";
+                textArea.style.left = "0";
+                textArea.style.position = "fixed";
+                textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) showToast("Copiado com sucesso!");
+                    else showToast("Não foi possível copiar automaticamente. Selecione e copie.", "error");
+                } catch (err) {
+                    showToast("Erro ao copiar manual.", "error");
+                }
+                document.body.removeChild(textArea);
+            };
+
+            // --- PDF Generation and Sharing Logic ---
+            const generatePDFBlob = async () => {
+                const { jsPDF } = window.jspdf;
+                const pages = document.querySelectorAll('.receipt-page');
+                if (pages.length === 0) return null;
+
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = 210;
+                const pdfHeight = 297;
+
+                for (let i = 0; i < pages.length; i++) {
+                    const page = pages[i];
+                    
+                    const clone = page.cloneNode(true);
+                    clone.style.transform = 'none';
+                    clone.style.position = 'fixed';
+                    clone.style.top = '0';
+                    clone.style.left = '0';
+                    clone.style.zIndex = '-9999';
+                    document.body.appendChild(clone);
+
+                    await new Promise(r => setTimeout(r, 100));
+
+                    const canvas = await html2canvas(clone, {
+                        scale: 2, 
+                        useCORS: true,
+                        logging: false
+                    });
+                    
+                    document.body.removeChild(clone);
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                    
+                    if (i > 0) pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                }
+
+                return pdf.output('blob');
+            };
+
+            const handleShareAction = async (method) => {
+                if (!checkUsageLimit()) return;
+                
+                setIsGeneratingPdf(true);
+                setShowShareMenu(false); 
+                
+                try {
+                    let preOpenedWindow = null;
+                    if (method === 'whatsapp' || method === 'email') {
+                         preOpenedWindow = window.open('', '_blank');
+                         if (preOpenedWindow) {
+                             preOpenedWindow.document.write(`
+                                <html>
+                                    <head><title>A gerar...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-center;height:100vh;background:#f8fafc;color:#475569;margin:0;}</style></head>
+                                    <body>
+                                        <div style="text-align:center">
+                                            <div style="margin-bottom:10px;font-weight:bold;font-size:18px;">A gerar o seu documento...</div>
+                                            <div style="font-size:14px;">Por favor, aguarde o download do PDF.</div>
+                                        </div>
+                                    </body>
+                                </html>
+                             `);
+                         }
+                    }
+
+                    if (activeTab !== 'preview' && window.innerWidth < 1024) {
+                       setActiveTab('preview');
+                       await new Promise(r => setTimeout(r, 500));
+                    }
+                    
+                    const pdfBlob = await generatePDFBlob();
+                    
+                    if (!pdfBlob) {
+                        showToast("Erro ao gerar PDF.", "error");
+                        if(preOpenedWindow) preOpenedWindow.close();
+                        setIsGeneratingPdf(false);
+                        return;
+                    }
+
+                    const sanitizedClientName = (client.name || 'Cliente').replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '').trim();
+                    const fileName = `Recibo - ${sanitizedClientName}.pdf`;
+                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                    
+                    incrementUsage(); 
+
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(pdfBlob);
+                    link.download = fileName;
+                    link.click();
+
+                    if (method === 'whatsapp') {
+                        let phone = client.phone.replace(/\D/g, '');
+                        if (phone.length >= 10 && phone.length <= 11) {
+                            phone = '55' + phone;
+                        }
+                        
+                        const text = `Olá ${client.name || 'Cliente'}, segue em anexo o recibo de ${company.name}. Gratidão pela preferência e estamos à disposição!`;
+                        const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+                        
+                        if (preOpenedWindow) {
+                             preOpenedWindow.location.href = url;
+                        } else {
+                             window.location.href = url;
+                        }
+
+                    } else if (method === 'email') {
+                        const subject = `Recibo - ${company.name}`;
+                        const body = `Olá ${client.name || 'Cliente'},\n\nSegue em anexo o recibo.\n\nAtenciosamente,\n${company.name}`;
+                        const mailto = `mailto:${client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        
+                        if (preOpenedWindow) {
+                             preOpenedWindow.location.href = mailto;
+                             setTimeout(() => { if(!preOpenedWindow.closed) preOpenedWindow.close(); }, 2000);
+                        } else {
+                             window.location.href = mailto;
+                        }
+
+                    } else if (method === 'native') {
+                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            try {
+                                await navigator.share({
+                                    files: [file],
+                                    title: 'Recibo',
+                                    text: `Recibo de ${company.name}`
+                                });
+                            } catch (err) {
+                                if (err.name !== 'AbortError') showToast("Erro na partilha nativa.", "error");
+                            }
+                        } else {
+                            showToast("Partilha nativa não suportada. Ficheiro descarregado.", "error");
+                        }
+                    }
+
+                } catch (error) {
+                    console.error("Erro:", error);
+                    showToast("Ocorreu um erro inesperado.", "error");
+                } finally {
+                    setIsGeneratingPdf(false);
+                }
+            };
+
+
+            const applyTheme = (themeId) => { const theme = THEMES.find(t => t.id === themeId); if (theme) { setDesign(prev => ({ ...prev, themeId: theme.id, primaryColor: theme.primary, secondaryColor: theme.secondary, textColor: theme.text, backgroundColor: theme.bg, headerColor: theme.headerBg, headerTextColor: theme.headerText })); } };
+            
+            const deleteReceipt = (id) => {
+                confirmAction("Tem certeza que deseja excluir este recibo do histórico?", () => {
+                    const updated = savedReceipts.filter(r => r.id !== id);
+                    setSavedReceipts(updated);
+                    localStorage.setItem('nexus_receipts_history', JSON.stringify(updated));
+                    showToast("Recibo excluído.");
+                });
+            };
+
+            const handleLoadReceipt = (receipt) => {
+                confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => {
+                    setCompany(receipt.company);
+                    setClient(receipt.client);
+                    setItems(receipt.items);
+                    setControlNumber(receipt.controlNumber);
+                    setActiveTab('edit');
+                    showToast("Recibo carregado.");
+                });
+            };
+
+            const exportData = () => { 
+                const dataToExport = { 
+                    deviceId, 
+                    receiptCount, 
+                    savedReceipts, 
+                    company, // Dados atuais da tela
+                    profiles // Lista de todas as empresas salvas
+                }; 
+                const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' }); 
+                const url = URL.createObjectURL(blob); 
+                const a = document.createElement('a'); 
+                a.href = url; 
+                a.download = `nexus_backup_${new Date().toISOString().split('T')[0]}.json`; 
+                a.click(); 
+                URL.revokeObjectURL(url); 
+            };
+            
+            const importData = (e) => { 
+                const file = e.target.files[0]; 
+                if (!file) return; 
+                const reader = new FileReader(); 
+                reader.onload = (ev) => { 
+                    try { 
+                        const imported = JSON.parse(ev.target.result); 
+                        
+                        // Importar Histórico de Recibos
+                        if (imported.savedReceipts) { 
+                            setSavedReceipts(imported.savedReceipts); 
+                            localStorage.setItem('nexus_receipts_history', JSON.stringify(imported.savedReceipts)); 
+                        } 
+                        
+                        // Importar Perfis de Empresas (Adicionado)
+                        if (imported.profiles) {
+                            setProfiles(imported.profiles);
+                            localStorage.setItem('nexus_company_profiles', JSON.stringify(imported.profiles));
+                        }
+
+                        // Importar dados da tela atual (opcional, mas bom para continuidade)
+                        if (imported.company) setCompany(imported.company); 
+                        
+                        showToast("Dados e empresas importados com sucesso!"); 
+                        setShowSettingsModal(false); 
+                    } catch(err) { 
+                        showToast("Erro ao importar arquivo. Formato inválido.", "error"); 
+                    } 
+                }; 
+                reader.readAsText(file); 
+            };
+            
+            const getWhatsAppLink = () => { const text = `Olá, gostaria de comprar a licença do App Nexus Nota de Vendas.\n\nMeu ID de Dispositivo é: *${deviceId}*\n\nPor favor, aguardo o código de ativação.`; return `https://wa.me/558899361992?text=${encodeURIComponent(text)}`; };
+
+            const getSocialIcon = (type, size = 10) => {
+                switch(type) {
+                    case 'instagram': return <Instagram size={size} className="inline"/>;
+                    case 'facebook': return <Facebook size={size} className="inline"/>;
+                    default: return <Globe size={size} className="inline"/>;
+                }
+            };
+
+            // --- EFFECTS ---
+            useEffect(() => {
+                let storedId = localStorage.getItem('nexus_device_id');
+                if (!storedId) {
+                    storedId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
+                    localStorage.setItem('nexus_device_id', storedId.toUpperCase());
+                }
+                setDeviceId(storedId.toUpperCase());
+                const storedLicense = localStorage.getItem('nexus_license_key');
+                if (storedLicense && storedLicense === generateLicenseHash(storedId.toUpperCase())) { setIsLicensed(true); setLicenseKey(storedLicense); }
+                setReceiptCount(parseInt(localStorage.getItem('nexus_receipt_count') || '0'));
+                try { setSavedReceipts(JSON.parse(localStorage.getItem('nexus_receipts_history')) || []); } catch(e) {}
+
+                // Load Company Profiles (Multi-profile Support)
+                try {
+                    const savedProfiles = localStorage.getItem('nexus_company_profiles');
+                    let profilesList = [];
+
+                    if (savedProfiles) {
+                        profilesList = JSON.parse(savedProfiles);
+                    } else {
+                        // Migration from old single profile system
+                        const legacyProfile = localStorage.getItem('nexus_company_profile');
+                        if (legacyProfile) {
+                            const parsed = JSON.parse(legacyProfile);
+                            const newProfile = {
+                                id: Date.now().toString(),
+                                name: parsed.company?.name || 'Minha Empresa',
+                                ...parsed,
+                                createdAt: new Date().toISOString()
+                            };
+                            profilesList = [newProfile];
+                            localStorage.setItem('nexus_company_profiles', JSON.stringify(profilesList));
+                            // Optional: Remove old key
+                            // localStorage.removeItem('nexus_company_profile'); 
+                            
+                            // Auto-load the migrated profile
+                            setCompany(prev => ({ ...prev, ...parsed.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
+                            if(parsed.signature) setSignature(parsed.signature);
+                            if(parsed.design) setDesign(parsed.design);
+                            setActiveProfileId(newProfile.id);
+                        }
+                    }
+                    setProfiles(profilesList);
+                } catch (e) {
+                    console.error("Erro ao carregar perfis", e);
+                }
+
+                const handleResize = () => {
+                    if (window.innerWidth < 768) {
+                        const newZoom = (window.innerWidth - 32) / 820; 
+                        setZoom(Math.max(0.3, Math.min(newZoom, 1.0)));
+                    } else {
+                       setZoom(0.85); 
+                    }
+                };
+                
+                handleResize(); 
+                
+                const resizeObserver = new ResizeObserver(() => {
+                     if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor);
+                     if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor);
+                });
+
+                window.addEventListener('resize', handleResize);
+                
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    resizeObserver.disconnect();
+                };
+            }, []);
+
+            useEffect(() => { 
+                const timeoutId = setTimeout(() => {
+                     if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor); 
+                }, 100);
+                return () => clearTimeout(timeoutId);
+            }, [activeTab, signature.type, penColor, layoutMode]);
+
+            useEffect(() => { 
+                const timeoutId = setTimeout(() => {
+                    if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor); 
+                }, 100);
+                return () => clearTimeout(timeoutId);
+            }, [activeTab, clientSignature.type, penColor, layoutMode]);
+
+            useEffect(() => { if (editorRef.current) editorRef.current.scrollTop = 0; }, [layoutMode, activeTab]);
+
+            // --- MEMOS ---
+            const filteredReceipts = useMemo(() => {
+                const now = new Date();
+                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                let list = savedReceipts;
+                if (searchQuery) { const q = searchQuery.toLowerCase(); list = list.filter(r => r.client.name.toLowerCase().includes(q) || r.client.doc.includes(q) || r.client.email.toLowerCase().includes(q) || r.client.phone.includes(q)); }
+                if (filterPeriod === 'today') list = list.filter(r => new Date(r.createdAt) >= startOfDay);
+                if (filterPeriod === 'week') list = list.filter(r => new Date(r.createdAt) >= startOfWeek);
+                if (filterPeriod === 'month') list = list.filter(r => new Date(r.createdAt) >= startOfMonth);
+                return list;
+            }, [savedReceipts, filterPeriod, searchQuery]);
+
+            const filteredTotal = filteredReceipts.reduce((acc, r) => acc + (r.total || 0), 0);
+            
+            const subtotal = items.reduce((acc, i) => acc + (i.qtd * i.price), 0);
+            const discountValue = subtotal * (discount / 100);
+            const total = Math.max(0, subtotal - discountValue);
+
+            const remainingCredits = Math.max(0, 1 - receiptCount);
+
+            // --- PAGINAÇÃO ---
+            const pages = useMemo(() => {
+                // AJUSTE DE EQUILÍBRIO V7 (Correção de "Espaço Virtual"/Corte)
+                // O problema de "texto no espaço virtual" ocorre porque o rodapé (Totais + Assinaturas)
+                // é fisicamente alto, mas o peso atribuído a ele estava baixo.
+                // Aumentei o FOOTER_WEIGHT para 11. Isso força a quebra de página
+                // antes que o conteúdo chegue perigosamente perto da borda inferior.
+                
+                const CHARS_PER_LINE = 38; 
+                const LINE_WEIGHT = 1;     
+                
+                const MAX_WEIGHT_FIRST_PAGE = 20; // Capacidade segura da P1
+                const MAX_WEIGHT_OTHER_PAGE = 27; // Capacidade segura da P2+
+                const FOOTER_WEIGHT = 11; // Aumentado de 8 para 11 (Rodapé é "pesado")
+
+                let generatedPages = [];
+                let currentItems = [];
+                let currentWeight = 0;
+                let isFirstPage = true;
+                let remainingItems = [...items];
+
+                for (let i = 0; i < remainingItems.length; i++) {
+                    const item = remainingItems[i];
+                    const descLength = item.description ? item.description.length : 0;
+                    const lines = Math.max(1, Math.ceil(descLength / CHARS_PER_LINE)); 
+                    const itemWeight = lines * LINE_WEIGHT;
+                    const maxWeight = isFirstPage ? MAX_WEIGHT_FIRST_PAGE : MAX_WEIGHT_OTHER_PAGE;
+
+                    if (currentWeight + itemWeight <= maxWeight) {
+                        currentItems.push(item);
+                        currentWeight += itemWeight;
+                    } else {
+                        generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false });
+                        currentItems = [item];
+                        currentWeight = itemWeight;
+                        isFirstPage = false;
+                    }
+                }
+
+                const maxWeightLast = isFirstPage ? MAX_WEIGHT_FIRST_PAGE : MAX_WEIGHT_OTHER_PAGE;
+                
+                // Lógica de proteção do rodapé
+                if (currentWeight + FOOTER_WEIGHT > maxWeightLast) {
+                    generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false });
+                    generatedPages.push({ items: [], pageIndex: generatedPages.length, isFirst: false, isLast: true });
+                } else {
+                    generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: true });
+                }
+                return generatedPages;
+            }, [items]);
+
+            // --- RENDER ---
+            return (
+                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
+                    
+                    {/* LOADING OVERLAY */}
+                    {isGeneratingPdf && (
+                        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
+                            <div className="loader mb-4"></div>
+                            <p className="text-lg font-bold animate-pulse">Gerando PDF...</p>
+                            <p className="text-sm text-slate-300">A preparar ficheiro</p>
+                        </div>
+                    )}
+
+                    {/* MODAL CONFIG */}
+                    {showSettingsModal && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
+                            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
+                                <button type="button" onClick={() => setShowSettingsModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><span className="sr-only">Fechar</span><IconBase size={24}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase></button>
+                                <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Settings className="text-slate-600" /> Configurações & Licença</h2>
+                                <div className="mb-8 border-b border-slate-100 pb-6">
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">{isLicensed ? <CheckCircle2 className="text-green-500" size={16}/> : <Lock className="text-orange-500" size={16}/>} Status da Licença</h3>
+                                    {!isLicensed && (<div className="bg-orange-50 text-orange-800 p-3 rounded-lg text-sm mb-4 border border-orange-100">Você está usando a versão gratuita. Restam <strong>{1 - receiptCount > 0 ? 1 - receiptCount : 0}</strong> recibos.</div>)}
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4"><label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block">ID do Dispositivo</label><div className="flex gap-2"><code className="flex-1 bg-white border border-slate-300 rounded px-3 py-2 font-mono text-sm text-slate-700">{deviceId}</code><button type="button" onClick={() => copyToClipboard(deviceId)} className="p-2 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600" title="Copiar"><Copy size={16} /></button></div></div>
+                                    {!isLicensed && (<div className="space-y-3"><a href={getWhatsAppLink()} target="_blank" rel="noreferrer" className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors"><Smartphone size={16} /> Comprar Licença</a><div className="flex gap-2"><input type="text" placeholder="Chave de ativação" className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-sm outline-none" value={inputLicense} onChange={(e) => setInputLicense(e.target.value)} /><button type="button" onClick={validateLicense} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm">Ativar</button></div>{licenseError && <p className="text-xs text-red-500 font-medium">{licenseError}</p>}</div>)}
+                                    {isLicensed && <p className="text-green-600 font-medium text-sm">Produto ativado e licenciado para este dispositivo.</p>}
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><Save className="text-blue-500" size={16}/> Backup e Restauração</h3>
+                                    <p className="text-xs text-slate-500 mb-4">Salve seus dados para não perder seus recibos se limpar o navegador.</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button type="button" onClick={exportData} className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"><Download className="text-slate-400 group-hover:text-blue-500" size={24} /><span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">Baixar Backup</span></button>
+                                        <button type="button" onClick={() => fileInputImportRef.current.click()} className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group"><Upload className="text-slate-400 group-hover:text-emerald-500" size={24} /><span className="text-sm font-medium text-slate-700 group-hover:text-emerald-700">Importar Dados</span><input type="file" ref={fileInputImportRef} className="hidden" accept=".json" onChange={importData} /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Navbar */}
+                    <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:hidden flex-shrink-0">
+                        <div className="max-w-[1600px] mx-auto px-4 py-2 h-auto md:h-16 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <div className="w-10 h-10 flex-shrink-0 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200"><Layout size={24} className="text-white" /></div>
+                            <div className="flex flex-col">
+                            <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">Nexus</h1>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                                <span className="text-xs font-medium text-indigo-700">Nota de Venda</span>
+                                <span className="hidden sm:inline text-slate-300">|</span>
+                                
+                                {/* Status da Licença / Créditos */}
+                                {!isLicensed ? (
+                                    <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${remainingCredits > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                                        <Lock size={10} />
+                                        <span>Restam: {remainingCredits} recibo(s)</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
+                                        <CheckCircle2 size={10} />
+                                        <span>Licença Premium</span>
+                                    </div>
+                                )}
+
+                                <span className="hidden sm:inline text-slate-300">|</span>
+                                <button type="button" onClick={() => setShowSettingsModal(true)} className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-full border border-slate-200 font-bold transition-colors"><Settings size={10} /> Configurações</button>
+                            </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-end w-full md:w-auto gap-2">
+                            <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 mr-2">
+                                <button type="button" onClick={() => { setActiveTab('edit'); setLayoutMode('side'); }} className={`p-2 rounded-md transition-all ${activeTab !== 'history' && layoutMode === 'side' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Editor Lateral"><Columns2 size={18}/></button>
+                                <button type="button" onClick={() => { setActiveTab('edit'); setLayoutMode('stack'); }} className={`p-2 rounded-md transition-all ${activeTab !== 'history' && layoutMode === 'stack' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Editor Vertical"><Rows size={18}/></button>
+                                <div className="w-px bg-slate-300 mx-1"></div>
+                                <button type="button" onClick={() => setActiveTab('history')} className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Histórico"><History size={18}/><span className="text-xs font-bold hidden sm:inline">Histórico</span></button>
+                            </div>
+                            
+                            <div className="relative">
+                                <button 
+                                    type="button" 
+                                    onClick={() => isLicensed || receiptCount < 1 ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} 
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                >
+                                    {!isLicensed && receiptCount >= 1 ? <Lock size={14} className="text-orange-500"/> : <Share2 size={18} />}
+                                    <span className="hidden sm:inline">Enviar</span>
+                                </button>
+
+                                {showShareMenu && (
+                                    <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50">
+                                        <div className="p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700 mb-2 border border-yellow-100">
+                                            1º O PDF será baixado.<br/>2º Anexe-o no App que abrir.
+                                        </div>
+                                        
+                                        <button 
+                                            onClick={() => handleShareAction('whatsapp')} 
+                                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><Smartphone size={16} /></div>
+                                            WhatsApp
+                                        </button>
+                                        
+                                        <button 
+                                            onClick={() => handleShareAction('email')} 
+                                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Mail size={16} /></div>
+                                            E-mail
+                                        </button>
+
+                                        <button 
+                                            onClick={() => handleShareAction('native')} 
+                                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"><Share2 size={16} /></div>
+                                            Outros Apps
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button type="button" onClick={handlePrintAction} className={`flex items-center gap-2 text-white px-5 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm ${!isLicensed && receiptCount >= 1 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
+                            {!isLicensed && receiptCount >= 1 ? <Lock size={18} /> : <Printer size={18} />}<span className="hidden sm:inline">Imprimir</span>
+                            </button>
+                        </div>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT */}
+                    <main className={`flex-1 max-w-[1600px] mx-auto w-full p-4 md:p-6 flex flex-col gap-6 ${layoutMode === 'side' && activeTab !== 'history' ? 'lg:flex-row lg:overflow-hidden' : 'lg:flex-col lg:h-auto'}`}>
+                        
+                        {/* HISTORY TAB */}
+                        {activeTab === 'history' && (
+                            <div className="w-full flex flex-col gap-6 h-full">
+                                
+                                <div className="flex items-center gap-4 pb-2 border-b border-slate-200">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveTab('edit')} 
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-300 hover:shadow-md transition-all font-bold text-sm shadow-sm"
+                                    >
+                                        <ArrowLeft size={18} /> Voltar para o Editor
+                                    </button>
+                                    <h2 className="text-xl font-bold text-slate-800">Histórico de Vendas</h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><FileText size={24} /></div>
+                                        <div><p className="text-sm text-slate-500 font-medium">Recibos Encontrados</p><p className="text-2xl font-bold text-slate-800">{filteredReceipts.length}</p></div>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><DollarSign size={24} /></div>
+                                        <div><p className="text-sm text-slate-500 font-medium">Total Filtrado</p><p className="text-2xl font-bold text-slate-800">{formatCurrency(filteredTotal)}</p></div>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center gap-2">
+                                        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buscar cliente, CPF, email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => setFilterPeriod('all')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos</button>
+                                            <button type="button" onClick={() => setFilterPeriod('today')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'today' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Hoje</button>
+                                            <button type="button" onClick={() => setFilterPeriod('week')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Semana</button>
+                                            <button type="button" onClick={() => setFilterPeriod('month')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'month' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Mês</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col">
+                                    <div className="p-4 border-b border-slate-100 bg-slate-50 font-medium text-xs text-slate-500 uppercase tracking-wider flex">
+                                        <div className="w-24">Data</div><div className="w-20">Nº Ctrl</div><div className="flex-1">Cliente</div><div className="flex-1 hidden md:block">Contato</div><div className="w-32 text-right">Valor</div><div className="w-32 text-center">Ações</div>
+                                    </div>
+                                    <div className="overflow-y-auto flex-1 custom-scrollbar">
+                                        {filteredReceipts.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center h-64 text-slate-400"><List size={48} className="mb-2 opacity-20" /><p>Nenhum recibo encontrado.</p></div>
+                                        ) : (
+                                            filteredReceipts.map(receipt => (
+                                                <div key={receipt.id} className="p-4 border-b border-slate-50 flex items-center hover:bg-slate-50 transition-colors text-sm">
+                                                    <div className="w-24 text-slate-500">{new Date(receipt.createdAt).toLocaleDateString('pt-BR')}</div>
+                                                    <div className="w-20 font-mono text-slate-600">#{receipt.controlNumber}</div>
+                                                    <div className="flex-1 font-medium text-slate-800">{receipt.client.name}<div className="text-[10px] text-slate-400 font-normal">{receipt.client.doc}</div></div>
+                                                    <div className="flex-1 hidden md:block text-slate-500 text-xs"><div>{receipt.client.phone}</div><div>{receipt.client.email}</div></div>
+                                                    <div className="w-32 text-right font-bold text-slate-700">{formatCurrency(receipt.total)}</div>
+                                                    <div className="w-32 flex justify-center gap-2">
+                                                        <button type="button" onClick={() => handleLoadReceipt(receipt)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md" title="Carregar"><PenTool size={16} /></button>
+                                                        <button type="button" onClick={() => deleteReceipt(receipt.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Excluir"><Trash2 size={16} /></button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* EDITOR & PREVIEW */}
+                        {activeTab !== 'history' && (
+                            <>
+                                <div ref={editorRef} className={`flex-shrink-0 flex flex-col gap-6 print:hidden ${activeTab === 'preview' ? 'hidden lg:flex' : 'flex'} ${layoutMode === 'side' ? 'lg:w-[450px] lg:h-full lg:overflow-y-auto custom-scrollbar pr-2' : 'w-full lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:items-start'}`}>
+                                <div className={`${layoutMode === 'side' ? 'flex flex-col gap-6' : 'contents'}`}>
+                                    <button type="button" onClick={handleSaveAction} className={`w-full py-3 bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${layoutMode === 'stack' ? 'lg:col-span-full' : ''}`}><Save size={18} /> Salvar dados no Histórico</button>
+
+                                    <EditorSection title="Estética & Tema" icon={Palette} colorClass="bg-indigo-500" borderColorClass="border-indigo-500" className="h-fit">
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Paleta de Cores</label>
+                                            <div className="grid grid-cols-4 gap-2">
+                                            {THEMES.map(theme => (
+                                                <button type="button" key={theme.id} onClick={() => applyTheme(theme.id)} className={`h-12 rounded-lg border-2 flex items-center justify-center transition-all relative overflow-hidden group ${design.themeId === theme.id ? 'border-indigo-600 ring-2 ring-indigo-100' : 'border-slate-100 hover:border-indigo-300'}`} title={theme.name}>
+                                                <div className="absolute inset-0 flex flex-col">
+                                                    <div className="h-1/2 w-full flex"><div className="w-1/2 h-full" style={{ backgroundColor: theme.primary }}></div><div className="w-1/2 h-full" style={{ backgroundColor: theme.headerBg }}></div></div>
+                                                    <div className="h-1/2 w-full" style={{ backgroundColor: theme.secondary }}></div>
+                                                </div>
+                                                {design.themeId === theme.id && <div className="absolute inset-0 flex items-center justify-center bg-black/20"><CheckCircle2 size={16} className="text-white drop-shadow-md" /></div>}
+                                                </button>
+                                            ))}
+                                            </div>
+                                            <div className="mt-4 grid grid-cols-2 gap-3">
+                                            <InputGroup label="Principal"><div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200"><input type="color" value={design.primaryColor} onChange={e => setDesign({...design, primaryColor: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" /><span className="text-[10px] font-mono text-slate-500">{design.primaryColor}</span></div></InputGroup>
+                                            <InputGroup label="Fundo"><div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200"><input type="color" value={design.backgroundColor} onChange={e => setDesign({...design, backgroundColor: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" /><span className="text-[10px] font-mono text-slate-500">{design.backgroundColor}</span></div></InputGroup>
+                                            <InputGroup label="Cabeçalho BG"><div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200"><input type="color" value={design.headerColor} onChange={e => setDesign({...design, headerColor: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" /><span className="text-[10px] font-mono text-slate-500">{design.headerColor}</span></div></InputGroup>
+                                            <InputGroup label="Cabeçalho Txt"><div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200"><input type="color" value={design.headerTextColor} onChange={e => setDesign({...design, headerTextColor: e.target.value})} className="w-6 h-6 rounded cursor-pointer border-none bg-transparent" /><span className="text-[10px] font-mono text-slate-500">{design.headerTextColor}</span></div></InputGroup>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Tipografia</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                            {FONTS.map((font, idx) => (<button type="button" key={idx} onClick={() => setDesign({...design, fontFamily: font.family})} className={`text-left px-3 py-2 rounded-lg border transition-all flex justify-between items-center ${design.fontFamily === font.family ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`} style={{ fontFamily: font.family }}><span className="text-xs truncate">{font.name}</span>{design.fontFamily === font.family && <CheckCircle2 size={14} />}</button>))}
+                                            </div>
+                                        </div>
+                                    </EditorSection>
+
+                                    <EditorSection title="Emissor & Logo" icon={Building2} colorClass="bg-blue-500" borderColorClass="border-blue-500" className="h-fit">
+                                        
+                                        {/* Multi-Company Management Section */}
+                                        <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 mb-4">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <div className="flex items-center gap-1.5 text-blue-800">
+                                                    <Briefcase size={14} />
+                                                    <span className="text-xs font-bold uppercase tracking-wider">Gerir Empresas</span>
+                                                </div>
+                                                {activeProfileId && (
+                                                    <button type="button" onClick={deleteProfile} className="text-red-500 hover:text-red-700 text-[10px] font-medium flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-red-50">
+                                                        <Trash2 size={12}/> Excluir
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <div className="relative flex-1">
+                                                    <select 
+                                                        className="w-full text-sm border border-blue-200 rounded-lg pl-2 pr-8 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 bg-white appearance-none cursor-pointer text-slate-700 font-medium"
+                                                        value={activeProfileId || ''}
+                                                        onChange={(e) => loadProfile(e.target.value)}
+                                                    >
+                                                        <option value="">+ Nova Empresa (Vazio/Atual)</option>
+                                                        {profiles.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400">
+                                                        <IconBase size={14}><polyline points="6 9 12 15 18 9"></polyline></IconBase>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={saveProfile}
+                                                    className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all shadow-sm flex-shrink-0 ${activeProfileId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
+                                                >
+                                                    <Save size={14} /> {activeProfileId ? 'Atualizar' : 'Salvar Nova'}
+                                                </button>
+                                            </div>
+                                            <p className="text-[10px] text-blue-400 mt-1.5 ml-1">
+                                                {activeProfileId 
+                                                    ? "Edite os dados abaixo e clique em Atualizar para salvar as alterações nesta empresa." 
+                                                    : "Preencha os dados abaixo e clique em Salvar Nova para adicionar à sua lista."}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex gap-4 items-start">
+                                        <div className="flex flex-col gap-2 w-24 flex-shrink-0">
+                                            <InputGroup label="Logo">
+                                                <div onClick={() => logoInputRef.current.click()} className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center hover:border-blue-400 hover:bg-blue-50 cursor-pointer transition-colors overflow-hidden relative group bg-slate-50">
+                                                {company.logo ? <img src={company.logo} className="w-full h-full object-contain" alt="Logo" /> : <div className="text-center p-1"><ImageIcon size={20} className="mx-auto text-slate-400 mb-1" /><span className="text-[10px] text-slate-400 leading-tight">Carregar</span></div>}
+                                                <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setCompany)} />
+                                                </div>
+                                            </InputGroup>
+                                        </div>
+                                        <div className="flex-1 space-y-3 min-w-0">
+                                            {company.logo && (
+                                            <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                                <div className="mb-2"><div className="flex justify-between text-[10px] text-slate-500 mb-1"><span>Tamanho</span><span>{company.logoWidth}px</span></div><input type="range" min="50" max="400" value={company.logoWidth} onChange={(e) => setCompany({...company, logoWidth: e.target.value})} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/></div>
+                                                <div><div className="flex justify-between text-[10px] text-slate-500 mb-1"><span>Opacidade</span><span>{company.logoOpacity}%</span></div><input type="range" min="10" max="100" value={company.logoOpacity} onChange={(e) => setCompany({...company, logoOpacity: e.target.value})} className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"/></div>
+                                            </div>
+                                            )}
+                                            <InputGroup label="Nome da Empresa"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all" placeholder="Ex: Tech Solutions" value={company.name} onChange={e => setCompany({...company, name: e.target.value})}/></InputGroup>
+                                            <div className="flex gap-2">
+                                            <div className="w-24 flex-shrink-0"><InputGroup label="Tipo"><select className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 outline-none" value={company.docType} onChange={e => setCompany({...company, docType: e.target.value})}><option>CNPJ</option><option>CPF</option></select></InputGroup></div>
+                                            <div className="flex-1"><InputGroup label="Documento"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" placeholder="00.000.000/0000-00" value={company.doc} onChange={e => setCompany({...company, doc: e.target.value})}/></InputGroup></div>
+                                            </div>
+                                        </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="col-span-2"><InputGroup label="Endereço Completo"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="Rua, Número, Bairro, Cidade - UF" value={company.address} onChange={e => setCompany({...company, address: e.target.value})} /></InputGroup></div>
+                                            
+                                            <div className="col-span-2"><InputGroup label="Cidade de Emissão"><div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><MapPin size={12} className="text-slate-400" /></div><input className="w-full pl-6 pr-2 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 outline-none" placeholder="Ex: São Paulo" value={company.city} onChange={e => setCompany({...company, city: e.target.value})} /></div></InputGroup></div>
+                                            
+                                            <div className="col-span-2 flex gap-2">
+                                                <div className="flex-1"><InputGroup label="Data de Emissão"><div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><CalendarDays size={12} className="text-slate-400" /></div><input type="date" className="w-full pl-6 pr-2 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 outline-none text-slate-600" value={company.date} onChange={e => setCompany({...company, date: e.target.value})} /></div></InputGroup></div>
+                                                <div className="w-24"><InputGroup label="Horário"><div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><Clock size={12} className="text-slate-400" /></div><input type="time" className="w-full pl-6 pr-1 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm focus:ring-2 focus:ring-yellow-400 outline-none text-slate-600" value={company.time} onChange={e => setCompany({...company, time: e.target.value})} /></div></InputGroup></div>
+                                            </div>
+
+                                            <div className="col-span-2 grid grid-cols-2 gap-2">
+                                                <InputGroup label="I.E. (Inscr. Estadual)"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="Opcional" value={company.ie} onChange={e => setCompany({...company, ie: e.target.value})} /></InputGroup>
+                                                <InputGroup label="I.M. (Inscr. Municipal)"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="Opcional" value={company.im} onChange={e => setCompany({...company, im: e.target.value})} /></InputGroup>
+                                            </div>
+
+                                            <InputGroup label="Site / Redes Sociais">
+                                                <div className="flex gap-2 mb-1.5">
+                                                    <button onClick={() => setCompany({...company, socialType: 'website'})} className={`p-1.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold uppercase ${company.socialType === 'website' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} type="button"><Globe size={14}/> Site</button>
+                                                    <button onClick={() => setCompany({...company, socialType: 'instagram'})} className={`p-1.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold uppercase ${company.socialType === 'instagram' ? 'bg-pink-50 border-pink-200 text-pink-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} type="button"><Instagram size={14}/> Insta</button>
+                                                    <button onClick={() => setCompany({...company, socialType: 'facebook'})} className={`p-1.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold uppercase ${company.socialType === 'facebook' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} type="button"><Facebook size={14}/> Face</button>
+                                                </div>
+                                                <div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400">
+                                                    {company.socialType === 'instagram' ? <Instagram size={14}/> : company.socialType === 'facebook' ? <Facebook size={14}/> : <Globe size={14}/>}
+                                                </div><input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder={company.socialType === 'instagram' ? '@usuario' : company.socialType === 'facebook' ? '/pagina' : 'www.site.com'} value={company.website} onChange={e => setCompany({...company, website: e.target.value})} /></div>
+                                            </InputGroup>
+                                            
+                                            <InputGroup label="Telefone / WhatsApp">
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"><Smartphone size={14}/></div>
+                                                    <input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="(00) 00000-0000" value={company.phone} onChange={e => setCompany({...company, phone: e.target.value})} />
+                                                </div>
+                                            </InputGroup>
+                                            
+                                            <InputGroup label="E-mail">
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"><Mail size={14}/></div>
+                                                    <input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="contato@empresa.com" value={company.email} onChange={e => setCompany({...company, email: e.target.value})} />
+                                                </div>
+                                            </InputGroup>
+                                        </div>
+                                    </EditorSection>
+
+                                    <EditorSection title="Cliente & Controle" icon={UserCheck} colorClass="bg-emerald-500" borderColorClass="border-emerald-500" className="h-fit">
+                                        <InputGroup label="Nome do Cliente"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" placeholder="Nome completo do cliente" value={client.name} onChange={e => setClient({...client, name: e.target.value})}/></InputGroup>
+                                        <div className="flex gap-2">
+                                            <div className="w-24 flex-shrink-0">
+                                                <InputGroup label="Tipo">
+                                                    <select 
+                                                        className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 outline-none" 
+                                                        value={client.docType} 
+                                                        onChange={e => setClient({...client, docType: e.target.value})}
+                                                    >
+                                                        <option>CPF</option>
+                                                        <option>CNPJ</option>
+                                                    </select>
+                                                </InputGroup>
+                                            </div>
+                                            <div className="flex-1"><InputGroup label="Documento"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" placeholder="000.000.000-00" value={client.doc} onChange={e => setClient({...client, doc: e.target.value})}/></InputGroup></div>
+                                            <div className="w-1/3 flex-shrink-0"><InputGroup label="Nº Controle"><div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><Hash size={12} className="text-slate-400" /></div><input className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-mono" placeholder="0001" value={controlNumber} onChange={e => setControlNumber(e.target.value)}/></div></InputGroup></div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
+                                            <InputGroup label="Email Cliente"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="Para envio direto" value={client.email} onChange={e => setClient({...client, email: e.target.value})} /></InputGroup>
+                                            <InputGroup label="WhatsApp Cliente"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="Para envio direto" value={client.phone} onChange={e => setClient({...client, phone: e.target.value})} /></InputGroup>
+                                        </div>
+                                    </EditorSection>
+
+                                    <EditorSection title="Itens & Valores" icon={FileText} colorClass="bg-indigo-500" borderColorClass="border-indigo-500" className="h-fit">
+                                        <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs text-slate-400 font-medium">Lista de Produtos/Serviços</span>
+                                        <button type="button" onClick={addItem} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1"><Plus size={12} /> Adicionar</button>
+                                        </div>
+                                        <div className="space-y-3">
+                                        {items.map((item, idx) => (
+                                            <div key={item.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-200 transition-colors group">
+                                            <div className="flex gap-2 mb-2 items-center">
+                                                <span className="w-5 h-5 rounded-full bg-slate-200 text-[10px] flex items-center justify-center text-slate-600 font-bold">{idx+1}</span>
+                                                <div className="flex-1"><input className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400 border-b border-slate-200 focus:border-indigo-500 pb-1" placeholder="Nome do produto ou serviço" value={item.description} onChange={e => updateItem(item.id, 'description', e.target.value)}/></div>
+                                                <button type="button" onClick={() => removeItem(item.id)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <div className="w-20"><InputGroup label="Qtd"><input type="number" className="w-full p-1.5 bg-white border border-slate-200 rounded text-sm text-center" value={item.qtd} onChange={e => updateItem(item.id, 'qtd', Number(e.target.value))} /></InputGroup></div>
+                                                <div className="flex-1"><InputGroup label="Unitário (R$)"><input type="number" className="w-full p-1.5 bg-white border border-slate-200 rounded text-sm" value={item.price} onChange={e => updateItem(item.id, 'price', Number(e.target.value))} /></InputGroup></div>
+                                                <div className="w-24"><InputGroup label="Total"><div className="w-full p-1.5 bg-slate-100 border border-slate-200 rounded text-sm text-right font-medium text-slate-600">{formatCurrency(item.qtd * item.price)}</div></InputGroup></div>
+                                            </div>
+                                            </div>
+                                        ))}
+                                        </div>
+                                        
+                                        <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end items-center gap-4">
+                                            <div className="w-32">
+                                                <InputGroup label="Desconto (%)">
+                                                    <div className="relative">
+                                                        <input 
+                                                            type="number" 
+                                                            min="0" 
+                                                            max="100" 
+                                                            className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-sm text-right font-bold text-red-500 outline-none focus:ring-2 focus:ring-indigo-500"
+                                                            value={discount} 
+                                                            onChange={e => setDiscount(Math.min(100, Math.max(0, Number(e.target.value))))} 
+                                                        />
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</div>
+                                                    </div>
+                                                </InputGroup>
+                                            </div>
+                                            <div className="w-40 text-right">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Valor Total</p>
+                                                <p className="text-2xl font-bold text-indigo-600">{formatCurrency(total)}</p>
+                                                {discount > 0 && <p className="text-xs text-red-400 font-medium line-through">{formatCurrency(subtotal)}</p>}
+                                            </div>
+                                        </div>
+                                    </EditorSection>
+
+                                    <EditorSection title="Mensagem de Rodapé" icon={MessageSquare} colorClass="bg-purple-500" borderColorClass="border-purple-500" className="h-fit">
+                                        <InputGroup label="Texto do Rodapé"><textarea className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all resize-y min-h-[60px]" placeholder="Digite uma mensagem de agradecimento ou observação..." value={footerMessage} onChange={e => setFooterMessage(e.target.value)}/></InputGroup>
+                                        <div className="flex gap-2 flex-wrap">{FOOTER_PRESETS.map((msg, i) => (<button type="button" key={i} onClick={() => setFooterMessage(msg)} className="text-[10px] px-2 py-1 bg-white border border-slate-200 rounded-md hover:bg-purple-50 hover:text-purple-600 transition-colors">Opção {i + 1}</button>))}</div>
+                                    </EditorSection>
+
+                                    <EditorSection title="Assinaturas" icon={PenTool} colorClass="bg-orange-500" borderColorClass="border-orange-500" className="h-fit">
+                                        <div className="space-y-2 mb-4">
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assinatura Emissor</label>
+                                            <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50 mb-2">
+                                            <button type="button" onClick={() => setSignature(p => ({...p, type: 'draw'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${signature.type === 'draw' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Desenhar</button>
+                                            <button type="button" onClick={() => setSignature(p => ({...p, type: 'upload'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${signature.type === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Upload</button>
+                                            </div>
+                                            {signature.type === 'draw' ? (
+                                            <div className="relative border border-slate-200 rounded-xl bg-white overflow-hidden h-32 group">
+                                                <canvas ref={canvasRef} className="w-full h-full cursor-crosshair touch-none" onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
+                                                <button type="button" onClick={clearCanvas} className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Eraser size={14} /></button>
+                                            </div>
+                                            ) : (
+                                            <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-slate-300 rounded-xl h-32 flex flex-col items-center justify-center text-slate-400 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all"><Upload size={20} className="mb-2"/><span className="text-xs">Clique para carregar</span><input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setSignature)} /></div>
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assinatura Cliente</label>
+                                            <div className="flex items-center gap-2"><span className="text-xs text-slate-500">Incluir</span><div onClick={() => setClientSignature(p => ({...p, include: !p.include}))} className={`w-9 h-5 rounded-full p-0.5 cursor-pointer transition-colors ${clientSignature.include ? 'bg-orange-600' : 'bg-slate-300'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${clientSignature.include ? 'translate-x-4' : 'translate-x-0'}`}></div></div></div>
+                                            </div>
+                                            {clientSignature.include && (
+                                            <>
+                                                <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50 mb-2">
+                                                <button type="button" onClick={() => setClientSignature(p => ({...p, type: 'draw'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${clientSignature.type === 'draw' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Desenhar</button>
+                                                <button type="button" onClick={() => setClientSignature(p => ({...p, type: 'upload'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${clientSignature.type === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Upload</button>
+                                                </div>
+                                                {clientSignature.type === 'draw' ? (
+                                                <div className="relative border border-slate-200 rounded-xl bg-white overflow-hidden h-32 group">
+                                                    <canvas ref={clientCanvasRef} className="w-full h-full cursor-crosshair touch-none" onMouseDown={startClientDrawing} onMouseMove={drawClient} onMouseUp={stopClientDrawing} onMouseLeave={stopClientDrawing} onTouchStart={startClientDrawing} onTouchMove={drawClient} onTouchEnd={stopClientDrawing} />
+                                                    <button type="button" onClick={clearClientCanvas} className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Eraser size={14} /></button>
+                                                </div>
+                                                ) : (
+                                                <div onClick={() => clientFileInputRef.current.click()} className="border-2 border-dashed border-slate-300 rounded-xl h-32 flex flex-col items-center justify-center text-slate-400 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all"><Upload size={20} className="mb-2"/><span className="text-xs">Clique para carregar</span><input type="file" ref={clientFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setClientSignature)} /></div>
+                                                )}
+                                            </>
+                                            )}
+                                        </div>
+                                    </EditorSection>
+                                </div>
+                                </div>
+
+                                <div className={`flex-1 bg-slate-200/50 rounded-2xl flex flex-col items-center p-4 md:p-8 overflow-hidden relative group ${activeTab === 'edit' ? 'hidden lg:flex' : 'flex'}`}>
+                                    <div className="absolute top-4 right-4 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1 rounded-lg border shadow-sm print:hidden">
+                                        <button type="button" onClick={() => setZoom(z => Math.max(0.3, z - 0.1))} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Diminuir Zoom"><ZoomOut size={18} /></button>
+                                        <span className="text-xs font-mono py-1.5 px-2 text-slate-500 border-x border-slate-100">{Math.round(zoom * 100)}%</span>
+                                        <button type="button" onClick={() => setZoom(z => Math.min(1.5, z + 0.1))} className="p-1.5 hover:bg-slate-100 rounded text-slate-600" title="Aumentar Zoom"><ZoomIn size={18} /></button>
+                                    </div>
+
+                                    <div className="w-full h-full overflow-auto flex justify-center items-start custom-scrollbar">
+                                        {/* Reduzi o gap visual entre páginas de 20px para 10px */}
+                                        <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '50px' }} className="print:transform-none print:gap-0 print:p-0">
+                                            {pages.map((page) => (
+                                                <div key={page.pageIndex} className="receipt-page shadow-2xl bg-white relative flex flex-col print:shadow-none transition-colors duration-300"
+                                                    style={{ fontFamily: design.fontFamily, backgroundColor: design.backgroundColor, color: design.textColor, width: '210mm', height: '297mm', padding: '10mm 20mm 20mm 20mm', boxSizing: 'border-box' }}>
+                                                    <div className="absolute top-4 right-6 text-[8px] opacity-40 uppercase tracking-widest font-bold">Página {page.pageIndex + 1} de {pages.length}</div>
+                                                    
+                                                    {page.isFirst ? (
+                                                        <div className="flex justify-between items-start mb-6 p-6 rounded-xl shadow-sm" style={{ backgroundColor: design.headerColor, color: design.headerTextColor }}>
+                                                            <div className="flex gap-5 items-center flex-1 pr-4">
+                                                                {company.logo && (<div className="flex-shrink-0" style={{ width: `${company.logoWidth}px` }}><img src={company.logo} alt="Logo" className="object-contain w-full" style={{ opacity: company.logoOpacity / 100, maxHeight: '100px' }} /></div>)}
+                                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                                    {/* Cabeçalho Uniformizado e Otimizado */}
+                                                                    <h1 className="text-xl font-extrabold uppercase tracking-tight mb-2 leading-none">{company.name || 'NOME DA EMPRESA'}</h1>
+                                                                    
+                                                                    <div className="flex flex-wrap gap-x-3 text-xs font-medium opacity-90 mb-2 items-center">
+                                                                        {company.doc && <span className="bg-black/5 px-1.5 py-0.5 rounded">{company.docType}: {company.doc}</span>}
+                                                                        {company.ie && <span>IE: {company.ie}</span>}
+                                                                        {company.im && <span>IM: {company.im}</span>}
+                                                                    </div>
+
+                                                                    <div className="text-xs opacity-90 space-y-1">
+                                                                        {company.address && <p className="leading-snug">{company.address}</p>}
+                                                                        {(company.phone || company.email || company.website) && (
+                                                                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 opacity-100 font-medium text-[11px]">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    {company.phone && <span className="flex items-center gap-1"><Smartphone size={12}/> {company.phone}</span>}
+                                                                                    {company.email && <span className="flex items-center gap-1"><Mail size={12}/> {company.email}</span>}
+                                                                                </div>
+                                                                                {company.website && <div className="flex items-center gap-1">{getSocialIcon(company.socialType, 12)} {company.website}</div>}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="text-right flex-shrink-0 flex flex-col items-end pl-2">
+                                                                <div className="px-3 py-1 rounded text-xs font-bold tracking-widest uppercase mb-2" style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}>Recibo</div>
+                                                                <div className="text-right">
+                                                                    <p className="text-[9px] uppercase opacity-60 tracking-wider font-bold mb-0.5">Emissão</p>
+                                                                    <p className="text-xs font-bold break-words max-w-[150px] leading-tight">
+                                                                        {formatDate(company.date, company.city)}<br/>
+                                                                        <span className="opacity-80 font-normal">{company.time ? `${company.time}` : ''}</span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex justify-between items-center border-b pb-4 mb-6 opacity-60" style={{ borderColor: `${design.textColor}20` }}>
+                                                            <div className="flex items-center gap-2">{company.logo && <img src={company.logo} alt="Logo" className="h-8 object-contain opacity-50" />}<span className="font-bold text-sm uppercase">{company.name}</span></div>
+                                                            <span className="text-xs">Continuação...</span>
+                                                        </div>
+                                                    )}
+
+                                                    {page.isFirst && (
+                                                        <div className="mb-6 p-4 rounded-lg border flex flex-col md:flex-row justify-between md:items-center gap-3" style={{ backgroundColor: design.secondaryColor, borderColor: `${design.primaryColor}20` }}>
+                                                            <div className="flex-1">
+                                                                <div className="flex items-baseline gap-2">
+                                                                    <span className="text-[10px] font-bold uppercase opacity-50 tracking-wider">Cliente</span>
+                                                                    <span className="font-bold text-base">{client.name || 'Nome do Cliente'}</span>
+                                                                </div>
+                                                                {client.doc && <div className="text-xs opacity-70 mt-0.5 ml-[54px]">{client.docType}: {client.doc}</div>}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 md:justify-end">
+                                                                <span className="text-[10px] font-bold uppercase opacity-50 tracking-wider">Controle</span>
+                                                                <span className="font-mono text-sm font-bold bg-white/60 px-2 py-0.5 rounded border border-black/5">#{controlNumber}</span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div className="flex-grow">
+                                                        <table className="w-full text-left border-collapse">
+                                                            <thead>
+                                                                <tr className="border-b-2" style={{ borderColor: `${design.primaryColor}30` }}>
+                                                                    <th className="py-2 px-2 w-10 text-center text-[10px] font-bold uppercase tracking-wider opacity-60">#</th>
+                                                                    <th className="py-2 px-2 text-[10px] font-bold uppercase tracking-wider opacity-60">Descrição</th>
+                                                                    <th className="py-2 px-2 w-16 text-center text-[10px] font-bold uppercase tracking-wider opacity-60">Qtd</th>
+                                                                    <th className="py-2 px-2 w-24 text-right text-[10px] font-bold uppercase tracking-wider opacity-60">Unit.</th>
+                                                                    <th className="py-2 px-2 w-24 text-right text-[10px] font-bold uppercase tracking-wider opacity-60">Total</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="text-sm">
+                                                                {page.items.map((item, idx) => (
+                                                                    <tr key={item.id} className="border-b" style={{ borderColor: `${design.textColor}10` }}>
+                                                                        <td className="py-2 px-2 text-center opacity-50 text-[11px] align-top">{idx + 1 + (page.isFirst ? 0 : 10 + (page.pageIndex - 1) * 22)}</td>
+                                                                        {/* Adicionei break-words e max-w para garantir a quebra */}
+                                                                        <td className="py-2 px-2 font-medium leading-tight break-words max-w-[200px]">{item.description}</td>
+                                                                        <td className="py-2 px-2 text-center opacity-80 align-top">{item.qtd}</td>
+                                                                        <td className="py-2 px-2 text-right opacity-80 align-top">{formatCurrency(item.price)}</td>
+                                                                        <td className="py-2 px-2 text-right font-bold align-top" style={{ color: design.primaryColor }}>{formatCurrency(item.qtd * item.price)}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    {page.isLast && (
+                                                        <div className="mt-auto break-inside-avoid">
+                                                            <div className="flex justify-end mt-4 mb-8">
+                                                                <div className="w-full md:w-1/2 lg:w-5/12 bg-slate-50/50 p-4 rounded-lg border" style={{ borderColor: `${design.textColor}10` }}>
+                                                                    <div className="flex justify-between items-center py-1 border-b" style={{ borderColor: `${design.textColor}20` }}>
+                                                                        <span className="text-xs opacity-60 uppercase tracking-wide">Subtotal</span>
+                                                                        <span className="font-medium">{formatCurrency(subtotal)}</span>
+                                                                    </div>
+                                                                    {discount > 0 && (
+                                                                        <div className="flex justify-between items-center py-1 border-b" style={{ borderColor: `${design.textColor}20` }}>
+                                                                            <span className="text-xs opacity-60 uppercase tracking-wide text-red-500">Desconto ({discount}%)</span>
+                                                                            <span className="font-medium text-red-500">-{formatCurrency(discountValue)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex justify-between items-center py-2">
+                                                                        <span className="text-base font-bold uppercase">Total</span>
+                                                                        <span className="text-xl font-bold" style={{ color: design.primaryColor }}>{formatCurrency(total)}</span>
+                                                                    </div>
+                                                                    <div className="text-right border-t pt-1" style={{ borderColor: `${design.textColor}10` }}><p className="text-[10px] italic opacity-60">({numeroPorExtenso(total)})</p></div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-16 break-inside-avoid">
+                                                                <div className="flex flex-col items-center">
+                                                                    <div className="h-24 w-full flex items-end justify-center mb-3 relative">
+                                                                        {signature.image ? <img src={signature.image} alt="Assinatura" className="max-h-full max-w-full object-contain filter drop-shadow-sm" /> : <div className="w-full h-full flex items-center justify-center text-[10px] italic opacity-20 border border-dashed rounded bg-slate-50">Assinatura Digital</div>}
+                                                                    </div>
+                                                                    <div className="w-full border-t pt-3 text-center" style={{ borderColor: design.textColor }}><p className="font-bold text-sm">{company.name}</p><p className="text-[10px] opacity-70 mt-0.5">{company.docType}: {company.doc}</p><p className="text-[10px] opacity-50 uppercase mt-0.5 tracking-wider">Assinatura Autorizada</p></div>
+                                                                </div>
+                                                                {clientSignature.include && (
+                                                                    <div className="flex flex-col items-center">
+                                                                        <div className="h-24 w-full flex items-end justify-center mb-3 relative">
+                                                                            {clientSignature.image ? <img src={clientSignature.image} alt="Assinatura" className="max-h-full max-w-full object-contain filter drop-shadow-sm" /> : <div className="w-full h-full flex items-center justify-center text-[10px] italic opacity-20 border border-dashed rounded bg-slate-50">Assinatura Digital</div>}
+                                                                        </div>
+                                                                        <div className="w-full border-t pt-3 text-center" style={{ borderColor: design.textColor }}><p className="font-bold text-sm">{client.name}</p><p className="text-[10px] opacity-70 mt-0.5">{client.docType}: {client.doc}</p><p className="text-[10px] opacity-50 uppercase mt-0.5 tracking-wider">Aceite do Cliente</p></div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="mt-6 pt-4 border-t text-center opacity-50 text-[9px]" style={{ borderColor: `${design.textColor}20` }}><p>{footerMessage}</p></div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </main>
+
+                    {/* Footer Legal */}
+                    <footer className="bg-slate-900 text-slate-400 py-6 px-4 print:hidden pb-20 lg:pb-6 border-t border-slate-800 flex-shrink-0">
+                        <div className="max-w-4xl mx-auto text-center space-y-3">
+                        <div className="flex items-center justify-center gap-2 mb-2 text-slate-500"><ShieldCheck size={16} /><h4 className="text-xs font-bold uppercase tracking-widest">Aviso Legal de Direitos Autorais</h4></div>
+                        <div className="text-[10px] leading-relaxed opacity-70 space-y-2">
+                            <p className="font-bold text-slate-300">© 2025 Maria Jaqueline da Silva Pereira - CNPJ: 62.323.279/0001-00. Todos os direitos reservados.</p>
+                        </div>
+                        </div>
+                    </footer>
+
+                    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-3 z-40 print:hidden safe-area-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                        <button type="button" onClick={() => setActiveTab('edit')} className={`flex flex-col items-center text-xs gap-1 ${activeTab === 'edit' ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}><Settings size={20} /> Editar</button>
+                        <button type="button" onClick={() => setActiveTab('preview')} className={`flex flex-col items-center text-xs gap-1 ${activeTab === 'preview' ? 'text-indigo-600 font-bold' : 'text-slate-400'}`}><Layout size={20} /> Preview</button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
