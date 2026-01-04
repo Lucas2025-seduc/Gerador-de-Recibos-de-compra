@@ -28,6 +28,7 @@
     <meta name="theme-color" content="#1e293b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nexus">
 
     <style>
         /* Estilos de Impressão e Scrollbar */
@@ -327,6 +328,9 @@
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); 
             const [showShareMenu, setShowShareMenu] = useState(false); 
             const [discount, setDiscount] = useState(0); // Novo Estado para Desconto
+
+            // PWA Install State
+            const [installPrompt, setInstallPrompt] = useState(null);
 
             // Multi-Profile State
             const [profiles, setProfiles] = useState([]);
@@ -855,6 +859,16 @@
                     default: return <Globe size={size} className="inline"/>;
                 }
             };
+            
+            // --- PWA INSTALL HANDLER ---
+            const handleInstallApp = async () => {
+                if (!installPrompt) return;
+                installPrompt.prompt();
+                const { outcome } = await installPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    setInstallPrompt(null);
+                }
+            };
 
             // --- EFFECTS ---
             useEffect(() => {
@@ -922,6 +936,13 @@
 
                 window.addEventListener('resize', handleResize);
                 
+                // PWA INSTALL LISTENER
+                const handleBeforeInstallPrompt = (e) => {
+                    e.preventDefault();
+                    setInstallPrompt(e);
+                };
+                window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+                
                 // REGISTER SERVICE WORKER
                 // Only register if served over HTTP/HTTPS to avoid errors in local/blob previews
                 if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
@@ -932,6 +953,7 @@
                 
                 return () => {
                     window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
                     resizeObserver.disconnect();
                 };
             }, []);
@@ -1053,6 +1075,10 @@
                                         <button type="button" onClick={() => fileInputImportRef.current.click()} className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group"><Upload className="text-slate-400 group-hover:text-emerald-500" size={24} /><span className="text-sm font-medium text-slate-700 group-hover:text-emerald-700">Importar Dados</span><input type="file" ref={fileInputImportRef} className="hidden" accept=".json" onChange={importData} /></button>
                                     </div>
                                 </div>
+                                <div className="mt-8 pt-6 border-t border-slate-100">
+                                     <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2"><Smartphone className="text-slate-500" size={16}/> Instalação no iPhone</h3>
+                                     <p className="text-xs text-slate-500">Para instalar no iOS, toque no botão de <strong>Partilha</strong> do Safari e escolha <strong>"Adicionar ao Ecrã Principal"</strong>.</p>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1095,7 +1121,20 @@
                                 <button type="button" onClick={() => setActiveTab('history')} className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Histórico"><History size={18}/><span className="text-xs font-bold hidden sm:inline">Histórico</span></button>
                             </div>
                             
-                            <div className="relative">
+                            <div className="relative flex items-center gap-2">
+                                {/* BOTÃO INSTALAR PWA (Só aparece se o navegador permitir) */}
+                                {installPrompt && (
+                                    <button 
+                                        type="button" 
+                                        onClick={handleInstallApp} 
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 animate-pulse shadow-sm"
+                                        title="Instalar App no Dispositivo"
+                                    >
+                                        <Download size={18} />
+                                        <span className="hidden sm:inline">Instalar App</span>
+                                    </button>
+                                )}
+
                                 <button 
                                     type="button" 
                                     onClick={() => isLicensed || receiptCount < 1 ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} 
