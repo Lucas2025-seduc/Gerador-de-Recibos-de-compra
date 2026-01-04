@@ -5,10 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus - Nota de Vendas</title>
     
-    <!-- PWA Manifest -->
+    <!-- PWA & Mobile Icons Setup -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nexus">
+
+    <!-- Ícones para Instalação (PWA) -->
+    <!-- Certifique-se de ter os arquivos icon-192.png e icon-512.png na mesma pasta -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Link para o Manifesto (Necessário para instalar no Android) -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#2563eb">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2921/2921222.png">
 
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -88,24 +98,27 @@
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
-    <div id="root" class="h-full w-full flex flex-col"></div>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registrado com sucesso:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('Falha ao registrar ServiceWorker:', error);
-                    });
-            });
-        }
-    </script>
+    <div id="root" class="h-screen w-full flex flex-col"></div>
 
     <script type="text/babel">
         const { useState, useRef, useEffect, useMemo } = React;
+
+        // --- TOAST NOTIFICATION SYSTEM (Adicionado para substituir alerts simples) ---
+        const Toast = ({ message, type = 'success', onClose }) => {
+            useEffect(() => {
+                const timer = setTimeout(onClose, 3000);
+                return () => clearTimeout(timer);
+            }, [onClose]);
+
+            const bgClass = type === 'error' ? 'bg-red-500' : 'bg-slate-800';
+            
+            return (
+                <div className={`fixed top-4 right-4 z-[9999] ${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in`}>
+                    <span className="text-sm font-medium">{message}</span>
+                    <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded-full p-1"><X size={14} /></button>
+                </div>
+            );
+        };
 
         // --- ÍCONES ---
         const IconBase = ({ children, size = 24, className = "", ...props }) => (
@@ -278,49 +291,6 @@
             img.src = imageSrc;
         };
 
-        // --- COPY FALLBACK FUNCTION ---
-        const copyToClipboard = (text) => {
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        alert("Copiado com sucesso!");
-                    }).catch(err => {
-                        fallbackCopy(text);
-                    });
-                } else {
-                    fallbackCopy(text);
-                }
-            } catch (e) {
-                fallbackCopy(text);
-            }
-        };
-
-        const fallbackCopy = (text) => {
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            
-            // Estilos para evitar que o elemento afete o layout
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.position = "fixed";
-            textArea.style.opacity = "0";
-
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) alert("Copiado com sucesso!");
-                else alert("Não foi possível copiar automaticamente. Por favor selecione e copie.");
-            } catch (err) {
-                alert("Erro ao copiar. Por favor selecione e copie manualmente.");
-            }
-
-            document.body.removeChild(textArea);
-        };
-
-
         // --- COMPONENTS ---
         const InputGroup = ({ label, children }) => (
             <div className="space-y-1.5 w-full">
@@ -348,6 +318,7 @@
             const [activeTab, setActiveTab] = useState('edit');
             const [layoutMode, setLayoutMode] = useState('side');
             const [zoom, setZoom] = useState(0.85);
+            const [toast, setToast] = useState(null); // Toast state
 
             // States
             const [deviceId, setDeviceId] = useState('');
@@ -362,13 +333,13 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); 
             const [showShareMenu, setShowShareMenu] = useState(false); 
-            const [discount, setDiscount] = useState(0); // Novo Estado para Desconto
+            const [discount, setDiscount] = useState(0);
 
             // Multi-Profile State
             const [profiles, setProfiles] = useState([]);
             const [activeProfileId, setActiveProfileId] = useState(null);
 
-            // Estado Inicial Vazio com Novos Campos
+            // Estado Inicial Vazio
             const [company, setCompany] = useState({
                 name: '', docType: 'CNPJ', doc: '',
                 address: '', phone: '', email: '',
@@ -379,7 +350,7 @@
                 socialType: 'website' 
             });
             const [controlNumber, setControlNumber] = useState(String(Math.floor(Date.now() / 1000)));
-            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' }); // Adicionado docType
+            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' });
             const [footerMessage, setFooterMessage] = useState(FOOTER_PRESETS[1]);
             const [items, setItems] = useState([{ id: 1, description: '', qtd: 1, price: 0 }]);
             
@@ -401,6 +372,11 @@
             const logoInputRef = useRef(null);
             const editorRef = useRef(null);
             const fileInputImportRef = useRef(null);
+
+            // Helper to show toasts
+            const showToast = (message, type = 'success') => {
+                setToast({ message, type });
+            };
 
             // --- CANVAS FUNCTIONS ---
             const penColor = design.themeId.includes('dark') || design.themeId === 'midnight' ? '#ffffff' : '#000000';
@@ -563,7 +539,7 @@
 
                 const profile = profiles.find(p => p.id === id);
                 if (profile) {
-                    confirmAction("Carregar este perfil substituirá os dados atuais do emissor. Continuar?", () => {
+                    if (confirm("Carregar este perfil substituirá os dados atuais do emissor. Continuar?")) {
                         if (profile.company) {
                             setCompany(prev => ({
                                 ...prev, 
@@ -577,19 +553,19 @@
                         if (profile.design) setDesign(profile.design);
                         setActiveProfileId(id);
                         showToast(`Empresa "${profile.name}" carregada.`);
-                    });
+                    }
                 }
             };
 
             const deleteProfile = () => {
                 if (!activeProfileId) return;
-                confirmAction("Tem certeza que deseja excluir esta empresa salva?", () => {
+                if (confirm("Tem certeza que deseja excluir esta empresa salva?")) {
                     const updatedProfiles = profiles.filter(p => p.id !== activeProfileId);
                     setProfiles(updatedProfiles);
                     localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setActiveProfileId(null);
                     showToast("Perfil excluído.");
-                });
+                }
             };
 
             const validateLicense = () => {
@@ -814,23 +790,23 @@
             const applyTheme = (themeId) => { const theme = THEMES.find(t => t.id === themeId); if (theme) { setDesign(prev => ({ ...prev, themeId: theme.id, primaryColor: theme.primary, secondaryColor: theme.secondary, textColor: theme.text, backgroundColor: theme.bg, headerColor: theme.headerBg, headerTextColor: theme.headerText })); } };
             
             const deleteReceipt = (id) => {
-                confirmAction("Tem certeza que deseja excluir este recibo do histórico?", () => {
+                if (confirm("Tem certeza que deseja excluir este recibo do histórico?")) {
                     const updated = savedReceipts.filter(r => r.id !== id);
                     setSavedReceipts(updated);
                     localStorage.setItem('nexus_receipts_history', JSON.stringify(updated));
                     showToast("Recibo excluído.");
-                });
+                }
             };
 
             const handleLoadReceipt = (receipt) => {
-                confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => {
+                if (confirm("Carregar este recibo substituirá os dados atuais do editor. Continuar?")) {
                     setCompany(receipt.company);
                     setClient(receipt.client);
                     setItems(receipt.items);
                     setControlNumber(receipt.controlNumber);
                     setActiveTab('edit');
                     showToast("Recibo carregado.");
-                });
+                }
             };
 
             const exportData = () => { 
@@ -925,8 +901,6 @@
                             };
                             profilesList = [newProfile];
                             localStorage.setItem('nexus_company_profiles', JSON.stringify(profilesList));
-                            // Optional: Remove old key
-                            // localStorage.removeItem('nexus_company_profile'); 
                             
                             // Auto-load the migrated profile
                             setCompany(prev => ({ ...prev, ...parsed.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
@@ -1004,18 +978,13 @@
 
             // --- PAGINAÇÃO ---
             const pages = useMemo(() => {
-                // AJUSTE DE EQUILÍBRIO V7 (Correção de "Espaço Virtual"/Corte)
-                // O problema de "texto no espaço virtual" ocorre porque o rodapé (Totais + Assinaturas)
-                // é fisicamente alto, mas o peso atribuído a ele estava baixo.
-                // Aumentei o FOOTER_WEIGHT para 11. Isso força a quebra de página
-                // antes que o conteúdo chegue perigosamente perto da borda inferior.
-                
+                // AJUSTE DE EQUILÍBRIO V7
                 const CHARS_PER_LINE = 38; 
                 const LINE_WEIGHT = 1;     
                 
-                const MAX_WEIGHT_FIRST_PAGE = 20; // Capacidade segura da P1
-                const MAX_WEIGHT_OTHER_PAGE = 27; // Capacidade segura da P2+
-                const FOOTER_WEIGHT = 11; // Aumentado de 8 para 11 (Rodapé é "pesado")
+                const MAX_WEIGHT_FIRST_PAGE = 20; 
+                const MAX_WEIGHT_OTHER_PAGE = 27; 
+                const FOOTER_WEIGHT = 11;
 
                 let generatedPages = [];
                 let currentItems = [];
@@ -1043,7 +1012,6 @@
 
                 const maxWeightLast = isFirstPage ? MAX_WEIGHT_FIRST_PAGE : MAX_WEIGHT_OTHER_PAGE;
                 
-                // Lógica de proteção do rodapé
                 if (currentWeight + FOOTER_WEIGHT > maxWeightLast) {
                     generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false });
                     generatedPages.push({ items: [], pageIndex: generatedPages.length, isFirst: false, isLast: true });
@@ -1055,8 +1023,11 @@
 
             // --- RENDER ---
             return (
-                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'h-full min-h-screen lg:h-screen lg:overflow-hidden'}`}>
+                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
                     
+                    {/* TOAST CONTAINER */}
+                    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
                     {/* LOADING OVERLAY */}
                     {isGeneratingPdf && (
                         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
