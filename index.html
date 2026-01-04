@@ -5,9 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus - Nota de Vendas</title>
     
-    <!-- Link para o Manifesto Externo (Certifique-se que o arquivo manifest.json está na pasta) -->
+    <!-- PWA & Ícones (Padrão GitHub/Repositório) -->
+    <!-- Certifique-se de que manifest.json, icon-192.png e icon-512.png estão na mesma pasta -->
     <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-192.png">
     
+    <!-- Meta Tags para Mobile -->
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Nexus Vendas">
+
+    <!-- Bibliotecas Externas (CDN) -->
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -24,14 +34,6 @@
 
     <!-- Fontes Google -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Quicksand:wght@400;600;700&family=Merriweather:wght@300;400;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <meta name="theme-color" content="#1e293b">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Nexus Vendas">
-
-    <!-- Ícones para iOS (Adicione isso se quiser suporte melhor no iPhone) -->
-    <link rel="apple-touch-icon" href="./icon-192.png">
 
     <style>
         /* Estilos de Impressão e Scrollbar */
@@ -159,7 +161,6 @@
         const Facebook = (props) => <IconBase {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></IconBase>;
         const Instagram = (props) => <IconBase {...props}><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></IconBase>;
         const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
-
 
         // --- CONSTANTES ---
         const APP_SECRET = "NEXUS_VENDAS_2025_SECRET_KEY_LucasSilva"; 
@@ -329,6 +330,7 @@
             const [showShareMenu, setShowShareMenu] = useState(false); 
             const [discount, setDiscount] = useState(0);
 
+            // Multi-Profile State
             const [profiles, setProfiles] = useState([]);
             const [activeProfileId, setActiveProfileId] = useState(null);
 
@@ -465,6 +467,7 @@
                 localStorage.setItem('nexus_receipts_history', JSON.stringify(updatedHistory));
             };
 
+            // --- PROFILE MANAGEMENT ---
             const saveProfile = () => {
                 if (!company.name) {
                     showToast("Digite o nome da empresa para salvar.", "error");
@@ -499,9 +502,11 @@
                         updatedProfiles = [...profiles, newProfile];
                         showToast("Nova empresa salva com sucesso!");
                     }
+
                     localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setProfiles(updatedProfiles);
                     setActiveProfileId(newId);
+
                 } catch (e) {
                     if (e.name === 'QuotaExceededError') {
                         showToast("Espaço cheio! Tente usar imagens menores ou apagar perfis antigos.", "error");
@@ -516,6 +521,7 @@
                     setActiveProfileId(null);
                     return;
                 }
+
                 const profile = profiles.find(p => p.id === id);
                 if (profile) {
                     confirmAction("Carregar este perfil substituirá os dados atuais do emissor. Continuar?", () => {
@@ -595,6 +601,7 @@
                 }
             };
 
+            // --- COPY FALLBACK FUNCTION ---
             const copyToClipboard = (text) => {
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -632,6 +639,7 @@
                 document.body.removeChild(textArea);
             };
 
+            // --- PDF Generation and Sharing Logic ---
             const generatePDFBlob = async () => {
                 const { jsPDF } = window.jspdf;
                 const pages = document.querySelectorAll('.receipt-page');
@@ -800,7 +808,7 @@
                     deviceId, 
                     receiptCount, 
                     savedReceipts, 
-                    company,
+                    company, 
                     profiles
                 }; 
                 const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' }); 
@@ -819,15 +827,19 @@
                 reader.onload = (ev) => { 
                     try { 
                         const imported = JSON.parse(ev.target.result); 
+                        
                         if (imported.savedReceipts) { 
                             setSavedReceipts(imported.savedReceipts); 
                             localStorage.setItem('nexus_receipts_history', JSON.stringify(imported.savedReceipts)); 
                         } 
+                        
                         if (imported.profiles) {
                             setProfiles(imported.profiles);
                             localStorage.setItem('nexus_company_profiles', JSON.stringify(imported.profiles));
                         }
+
                         if (imported.company) setCompany(imported.company); 
+                        
                         showToast("Dados e empresas importados com sucesso!"); 
                         setShowSettingsModal(false); 
                     } catch(err) { 
@@ -847,6 +859,7 @@
                 }
             };
 
+            // --- EFFECTS ---
             useEffect(() => {
                 // --- PWA LISTENER ---
                 const handler = (e) => {
@@ -864,9 +877,10 @@
                 setDeviceId(storedId.toUpperCase());
                 const storedLicense = localStorage.getItem('nexus_license_key');
                 if (storedLicense && storedLicense === generateLicenseHash(storedId.toUpperCase())) { setIsLicensed(true); setLicenseKey(storedLicense); }
-                setReceiptCount(parseInt(localStorage.getItem('nexus_receipts_count') || '0'));
+                setReceiptCount(parseInt(localStorage.getItem('nexus_receipt_count') || '0'));
                 try { setSavedReceipts(JSON.parse(localStorage.getItem('nexus_receipts_history')) || []); } catch(e) {}
 
+                // Load Company Profiles (Multi-profile Support)
                 try {
                     const savedProfiles = localStorage.getItem('nexus_company_profiles');
                     let profilesList = [];
@@ -874,6 +888,7 @@
                     if (savedProfiles) {
                         profilesList = JSON.parse(savedProfiles);
                     } else {
+                        // Migration from old single profile system
                         const legacyProfile = localStorage.getItem('nexus_company_profile');
                         if (legacyProfile) {
                             const parsed = JSON.parse(legacyProfile);
@@ -915,15 +930,11 @@
 
                 window.addEventListener('resize', handleResize);
                 
-                // SERVICE WORKER REGISTRATION - Atualizado
+                // REGISTER SERVICE WORKER
                 if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
-                    navigator.serviceWorker.register('./service-worker.js') // Caminho explícito
-                    .then(reg => {
-                        console.log('Service Worker registrado!', reg);
-                        // Tentar atualizar se houver nova versão
-                        reg.update();
-                    })
-                    .catch(err => console.warn('Falha no registro do SW:', err));
+                    navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Service Worker registrado!', reg))
+                    .catch(err => console.warn('Falha no registro do SW (pode ser ignorado em desenvolvimento):', err));
                 }
                 
                 return () => {
@@ -1019,6 +1030,7 @@
             return (
                 <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'min-h-screen lg:h-screen lg:overflow-hidden'}`}>
                     
+                    {/* LOADING OVERLAY */}
                     {isGeneratingPdf && (
                         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
                             <div className="loader mb-4"></div>
@@ -1027,6 +1039,7 @@
                         </div>
                     )}
 
+                    {/* MODAL CONFIG */}
                     {showSettingsModal && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
                             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
@@ -1062,6 +1075,7 @@
                                 <span className="text-xs font-medium text-indigo-700">Nota de Venda</span>
                                 <span className="hidden sm:inline text-slate-300">|</span>
                                 
+                                {/* Status da Licença / Créditos */}
                                 {!isLicensed ? (
                                     <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${remainingCredits > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
                                         <Lock size={10} />
@@ -1256,6 +1270,8 @@
                                     </EditorSection>
 
                                     <EditorSection title="Emissor & Logo" icon={Building2} colorClass="bg-blue-500" borderColorClass="border-blue-500" className="h-fit">
+                                        
+                                        {/* Multi-Company Management Section */}
                                         <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 mb-4">
                                             <div className="flex justify-between items-center mb-2">
                                                 <div className="flex items-center gap-1.5 text-blue-800">
@@ -1489,6 +1505,7 @@
                                     </div>
 
                                     <div className="w-full h-full overflow-auto flex justify-center items-start custom-scrollbar">
+                                        {/* Reduzi o gap visual entre páginas de 20px para 10px */}
                                         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '50px' }} className="print:transform-none print:gap-0 print:p-0">
                                             {pages.map((page) => (
                                                 <div key={page.pageIndex} className="receipt-page shadow-2xl bg-white relative flex flex-col print:shadow-none transition-colors duration-300"
@@ -1500,6 +1517,7 @@
                                                             <div className="flex gap-5 items-center flex-1 pr-4">
                                                                 {company.logo && (<div className="flex-shrink-0" style={{ width: `${company.logoWidth}px` }}><img src={company.logo} alt="Logo" className="object-contain w-full" style={{ opacity: company.logoOpacity / 100, maxHeight: '100px' }} /></div>)}
                                                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                                                    {/* Cabeçalho Uniformizado e Otimizado */}
                                                                     <h1 className="text-xl font-extrabold uppercase tracking-tight mb-2 leading-none">{company.name || 'NOME DA EMPRESA'}</h1>
                                                                     
                                                                     <div className="flex flex-wrap gap-x-3 text-xs font-medium opacity-90 mb-2 items-center">
