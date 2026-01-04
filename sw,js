@@ -1,10 +1,10 @@
-const CACHE_NAME = 'nexus-vendas-v1';
+const CACHE_NAME = 'nexus-vendas-v2'; // Atualizado para v2 para garantir que os ícones sejam baixados
 const ASSETS_TO_CACHE = [
   './',
   './Nota de vendas.html',
   './manifest.json',
-  './icon-192.png', // Ícone padrão PWA pequeno
-  './icon-512.png', // Ícone padrão PWA grande
+  './icon-192.png', // Deve corresponder exatamente ao nome do arquivo na pasta
+  './icon-512.png', // Deve corresponder exatamente ao nome do arquivo na pasta
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
@@ -21,6 +21,7 @@ self.addEventListener('install', (event) => {
         return cache.addAll(ASSETS_TO_CACHE);
       })
   );
+  self.skipWaiting(); // Força o SW a ativar imediatamente
 });
 
 // Ativação e Limpeza
@@ -34,6 +35,7 @@ self.addEventListener('activate', (event) => {
       }));
     })
   );
+  self.clients.claim(); // Controla a página imediatamente
 });
 
 // Fetch
