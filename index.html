@@ -5,21 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus - Nota de Vendas</title>
     
-    <!-- PWA & Mobile Icons Setup -->
-    <meta name="theme-color" content="#4f46e5">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Nexus">
-
-    <!-- Ícones para Instalação (PWA) -->
-    <!-- Certifique-se de ter os arquivos icon-192.png e icon-512.png na mesma pasta -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
-    <!-- Link para o Manifesto (Necessário para instalar no Android) -->
+    <!-- Link para o Manifesto Externo -->
     <link rel="manifest" href="manifest.json">
-
+    
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -36,6 +24,10 @@
 
     <!-- Fontes Google -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Quicksand:wght@400;600;700&family=Merriweather:wght@300;400;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <style>
         /* Estilos de Impressão e Scrollbar */
@@ -98,26 +90,27 @@
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased">
-    <div id="root" class="h-screen w-full flex flex-col"></div>
+    <div id="root" class="w-full flex flex-col"></div>
 
     <script type="text/babel">
         const { useState, useRef, useEffect, useMemo } = React;
 
-        // --- TOAST NOTIFICATION SYSTEM (Adicionado para substituir alerts simples) ---
-        const Toast = ({ message, type = 'success', onClose }) => {
-            useEffect(() => {
-                const timer = setTimeout(onClose, 3000);
-                return () => clearTimeout(timer);
-            }, [onClose]);
-
-            const bgClass = type === 'error' ? 'bg-red-500' : 'bg-slate-800';
-            
-            return (
-                <div className={`fixed top-4 right-4 z-[9999] ${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in`}>
-                    <span className="text-sm font-medium">{message}</span>
-                    <button onClick={onClose} className="ml-2 hover:bg-white/20 rounded-full p-1"><X size={14} /></button>
-                </div>
-            );
+        // --- MENSAGENS TOAST (Simples) ---
+        const showToast = (message, type = 'success') => {
+            const toast = document.createElement('div');
+            toast.className = `fixed top-4 right-4 z-[9999] px-6 py-3 rounded-lg shadow-xl text-white font-bold text-sm animate-slide-in flex items-center gap-2 ${type === 'error' ? 'bg-red-500' : 'bg-green-600'}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        };
+        
+        const confirmAction = (message, callback) => {
+            if (window.confirm(message)) callback();
         };
 
         // --- ÍCONES ---
@@ -291,6 +284,7 @@
             img.src = imageSrc;
         };
 
+
         // --- COMPONENTS ---
         const InputGroup = ({ label, children }) => (
             <div className="space-y-1.5 w-full">
@@ -318,7 +312,6 @@
             const [activeTab, setActiveTab] = useState('edit');
             const [layoutMode, setLayoutMode] = useState('side');
             const [zoom, setZoom] = useState(0.85);
-            const [toast, setToast] = useState(null); // Toast state
 
             // States
             const [deviceId, setDeviceId] = useState('');
@@ -333,13 +326,13 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); 
             const [showShareMenu, setShowShareMenu] = useState(false); 
-            const [discount, setDiscount] = useState(0);
+            const [discount, setDiscount] = useState(0); // Novo Estado para Desconto
 
             // Multi-Profile State
             const [profiles, setProfiles] = useState([]);
             const [activeProfileId, setActiveProfileId] = useState(null);
 
-            // Estado Inicial Vazio
+            // Estado Inicial Vazio com Novos Campos
             const [company, setCompany] = useState({
                 name: '', docType: 'CNPJ', doc: '',
                 address: '', phone: '', email: '',
@@ -350,7 +343,7 @@
                 socialType: 'website' 
             });
             const [controlNumber, setControlNumber] = useState(String(Math.floor(Date.now() / 1000)));
-            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' });
+            const [client, setClient] = useState({ name: '', doc: '', docType: 'CPF', email: '', phone: '' }); // Adicionado docType
             const [footerMessage, setFooterMessage] = useState(FOOTER_PRESETS[1]);
             const [items, setItems] = useState([{ id: 1, description: '', qtd: 1, price: 0 }]);
             
@@ -372,11 +365,6 @@
             const logoInputRef = useRef(null);
             const editorRef = useRef(null);
             const fileInputImportRef = useRef(null);
-
-            // Helper to show toasts
-            const showToast = (message, type = 'success') => {
-                setToast({ message, type });
-            };
 
             // --- CANVAS FUNCTIONS ---
             const penColor = design.themeId.includes('dark') || design.themeId === 'midnight' ? '#ffffff' : '#000000';
@@ -539,7 +527,7 @@
 
                 const profile = profiles.find(p => p.id === id);
                 if (profile) {
-                    if (confirm("Carregar este perfil substituirá os dados atuais do emissor. Continuar?")) {
+                    confirmAction("Carregar este perfil substituirá os dados atuais do emissor. Continuar?", () => {
                         if (profile.company) {
                             setCompany(prev => ({
                                 ...prev, 
@@ -553,19 +541,19 @@
                         if (profile.design) setDesign(profile.design);
                         setActiveProfileId(id);
                         showToast(`Empresa "${profile.name}" carregada.`);
-                    }
+                    });
                 }
             };
 
             const deleteProfile = () => {
                 if (!activeProfileId) return;
-                if (confirm("Tem certeza que deseja excluir esta empresa salva?")) {
+                confirmAction("Tem certeza que deseja excluir esta empresa salva?", () => {
                     const updatedProfiles = profiles.filter(p => p.id !== activeProfileId);
                     setProfiles(updatedProfiles);
                     localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setActiveProfileId(null);
                     showToast("Perfil excluído.");
-                }
+                });
             };
 
             const validateLicense = () => {
@@ -790,23 +778,23 @@
             const applyTheme = (themeId) => { const theme = THEMES.find(t => t.id === themeId); if (theme) { setDesign(prev => ({ ...prev, themeId: theme.id, primaryColor: theme.primary, secondaryColor: theme.secondary, textColor: theme.text, backgroundColor: theme.bg, headerColor: theme.headerBg, headerTextColor: theme.headerText })); } };
             
             const deleteReceipt = (id) => {
-                if (confirm("Tem certeza que deseja excluir este recibo do histórico?")) {
+                confirmAction("Tem certeza que deseja excluir este recibo do histórico?", () => {
                     const updated = savedReceipts.filter(r => r.id !== id);
                     setSavedReceipts(updated);
                     localStorage.setItem('nexus_receipts_history', JSON.stringify(updated));
                     showToast("Recibo excluído.");
-                }
+                });
             };
 
             const handleLoadReceipt = (receipt) => {
-                if (confirm("Carregar este recibo substituirá os dados atuais do editor. Continuar?")) {
+                confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => {
                     setCompany(receipt.company);
                     setClient(receipt.client);
                     setItems(receipt.items);
                     setControlNumber(receipt.controlNumber);
                     setActiveTab('edit');
                     showToast("Recibo carregado.");
-                }
+                });
             };
 
             const exportData = () => { 
@@ -901,6 +889,8 @@
                             };
                             profilesList = [newProfile];
                             localStorage.setItem('nexus_company_profiles', JSON.stringify(profilesList));
+                            // Optional: Remove old key
+                            // localStorage.removeItem('nexus_company_profile'); 
                             
                             // Auto-load the migrated profile
                             setCompany(prev => ({ ...prev, ...parsed.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
@@ -931,6 +921,14 @@
                 });
 
                 window.addEventListener('resize', handleResize);
+                
+                // REGISTER SERVICE WORKER
+                // Only register if served over HTTP/HTTPS to avoid errors in local/blob previews
+                if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
+                    navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker registrado!', reg))
+                    .catch(err => console.warn('Falha no registro do SW (pode ser ignorado em desenvolvimento):', err));
+                }
                 
                 return () => {
                     window.removeEventListener('resize', handleResize);
@@ -978,13 +976,12 @@
 
             // --- PAGINAÇÃO ---
             const pages = useMemo(() => {
-                // AJUSTE DE EQUILÍBRIO V7
                 const CHARS_PER_LINE = 38; 
                 const LINE_WEIGHT = 1;     
                 
-                const MAX_WEIGHT_FIRST_PAGE = 20; 
-                const MAX_WEIGHT_OTHER_PAGE = 27; 
-                const FOOTER_WEIGHT = 11;
+                const MAX_WEIGHT_FIRST_PAGE = 20; // Capacidade segura da P1
+                const MAX_WEIGHT_OTHER_PAGE = 27; // Capacidade segura da P2+
+                const FOOTER_WEIGHT = 11; // Aumentado de 8 para 11 (Rodapé é "pesado")
 
                 let generatedPages = [];
                 let currentItems = [];
@@ -1023,11 +1020,9 @@
 
             // --- RENDER ---
             return (
-                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'h-screen overflow-hidden'}`}>
+                /* CORREÇÃO APLICADA AQUI: Em mobile (padrão), usamos min-h-screen. Em Desktop (lg:), usamos h-screen e overflow-hidden para o efeito "app" */
+                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'min-h-screen lg:h-screen lg:overflow-hidden'}`}>
                     
-                    {/* TOAST CONTAINER */}
-                    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
                     {/* LOADING OVERLAY */}
                     {isGeneratingPdf && (
                         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
@@ -1571,7 +1566,6 @@
                                                                 {page.items.map((item, idx) => (
                                                                     <tr key={item.id} className="border-b" style={{ borderColor: `${design.textColor}10` }}>
                                                                         <td className="py-2 px-2 text-center opacity-50 text-[11px] align-top">{idx + 1 + (page.isFirst ? 0 : 10 + (page.pageIndex - 1) * 22)}</td>
-                                                                        {/* Adicionei break-words e max-w para garantir a quebra */}
                                                                         <td className="py-2 px-2 font-medium leading-tight break-words max-w-[200px]">{item.description}</td>
                                                                         <td className="py-2 px-2 text-center opacity-80 align-top">{item.qtd}</td>
                                                                         <td className="py-2 px-2 text-right opacity-80 align-top">{formatCurrency(item.price)}</td>
