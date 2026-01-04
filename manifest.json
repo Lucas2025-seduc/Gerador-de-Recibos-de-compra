@@ -2,7 +2,7 @@
     "name": "Nexus - Nota de Vendas",
     "short_name": "RecibosGenerator",
     "description": "Emissor de recibos e notas de venda profissional",
-    "start_url": "./Nota de vendas.html",
+    "start_url": "./index.html",
     "display": "standalone",
     "background_color": "#1e293b",
     "theme_color": "#1e293b",
@@ -23,5 +23,6 @@
         }
     ]
 }
+
 
 
