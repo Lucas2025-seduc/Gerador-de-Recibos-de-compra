@@ -1,6 +1,6 @@
 {
   "name": "Nexus - Nota de Vendas",
-  "short_name": "Nexus",
+  "short_name": "RebibosGenerator",
   "id": "nexus-vendas-v1",
   "start_url": "./index.html",
   "display": "standalone",
@@ -52,4 +52,5 @@
     }
   ]
 }
+
 
