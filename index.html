@@ -5,38 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nexus - Nota de Vendas</title>
     
-    <!-- PWA & Ícones (Padrão GitHub/Repositório) -->
-    <!-- Certifique-se de que manifest.json, icon-192.png e icon-512.png estão na mesma pasta -->
+    <!-- PWA -->
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/png" href="./icon-192.png">
     <link rel="apple-touch-icon" href="./icon-192.png">
     
-    <!-- Meta Tags para Mobile -->
+    <!-- Meta Tags Mobile -->
     <meta name="theme-color" content="#1e293b">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Nexus Vendas">
 
-    <!-- Bibliotecas Externas (CDN) -->
-    <!-- React & ReactDOM -->
+    <!-- Dependências -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel para JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Bibliotecas para PDF (html2canvas e jsPDF) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- Fontes Google -->
+    <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&family=Quicksand:wght@400;600;700&family=Merriweather:wght@300;400;700&family=Poppins:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        /* Estilos de Impressão e Scrollbar */
         @media print {
             @page { margin: 0; size: A4; }
             body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -78,16 +69,10 @@
             100% { transform: rotate(360deg); }
         }
         
-        body { overflow-y: auto; }
+        body { overflow-y: auto; background-color: #f1f5f9; }
 
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
     </style>
@@ -98,29 +83,10 @@
     <script type="text/babel">
         const { useState, useRef, useEffect, useMemo } = React;
 
-        // --- MENSAGENS TOAST ---
-        const showToast = (message, type = 'success') => {
-            const toast = document.createElement('div');
-            toast.className = `fixed top-4 right-4 z-[9999] px-6 py-3 rounded-lg shadow-xl text-white font-bold text-sm animate-slide-in flex items-center gap-2 ${type === 'error' ? 'bg-red-500' : 'bg-green-600'}`;
-            toast.innerHTML = `<span>${message}</span>`;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateX(100%)';
-                toast.style.transition = 'all 0.3s ease';
-                setTimeout(() => document.body.removeChild(toast), 300);
-            }, 3000);
-        };
-        
-        const confirmAction = (message, callback) => {
-            if (window.confirm(message)) callback();
-        };
-
-        // --- ÍCONES ---
+        // --- ICONS ---
         const IconBase = ({ children, size = 24, className = "", ...props }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>{children}</svg>
         );
-
         const Printer = (props) => <IconBase {...props}><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></IconBase>;
         const Plus = (props) => <IconBase {...props}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></IconBase>;
         const Trash2 = (props) => <IconBase {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></IconBase>;
@@ -162,9 +128,9 @@
         const Instagram = (props) => <IconBase {...props}><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></IconBase>;
         const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
 
-        // --- CONSTANTES ---
+        // --- CONSTANTS ---
         const APP_SECRET = "NEXUS_VENDAS_2025_SECRET_KEY_LucasSilva"; 
-
+        
         const FONTS = [
             { name: 'Moderna (Inter)', family: "'Inter', sans-serif" },
             { name: 'Corporativa (Roboto)', family: "'Roboto', sans-serif" },
@@ -211,7 +177,7 @@
             "Pagamento recebido. Este documento serve como quitação dos valores acima."
         ];
 
-        // --- UTILS ---
+        // --- UTILS (Funções de ajuda) ---
         const generateLicenseHash = (deviceId) => {
             try {
                 const rawString = deviceId + APP_SECRET;
@@ -283,8 +249,6 @@
             img.src = imageSrc;
         };
 
-
-        // --- COMPONENTS ---
         const InputGroup = ({ label, children }) => (
             <div className="space-y-1.5 w-full">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">{label}</label>
@@ -306,16 +270,13 @@
             </div>
         );
 
-        // --- APP ---
+        // --- APP COMPONENT ---
         function App() {
             const [activeTab, setActiveTab] = useState('edit');
             const [layoutMode, setLayoutMode] = useState('side');
             const [zoom, setZoom] = useState(0.85);
-            
-            // --- ESTADO DE INSTALAÇÃO PWA ---
             const [installPrompt, setInstallPrompt] = useState(null);
 
-            // States
             const [deviceId, setDeviceId] = useState('');
             const [licenseKey, setLicenseKey] = useState('');
             const [isLicensed, setIsLicensed] = useState(false);
@@ -330,7 +291,6 @@
             const [showShareMenu, setShowShareMenu] = useState(false); 
             const [discount, setDiscount] = useState(0);
 
-            // Multi-Profile State
             const [profiles, setProfiles] = useState([]);
             const [activeProfileId, setActiveProfileId] = useState(null);
 
@@ -367,9 +327,9 @@
             const editorRef = useRef(null);
             const fileInputImportRef = useRef(null);
 
-            // --- CANVAS FUNCTIONS ---
             const penColor = design.themeId.includes('dark') || design.themeId === 'midnight' ? '#ffffff' : '#000000';
 
+            // ... (Canvas Logic Omited for brevity, it's standard)
             const setupCanvas = (canvas, color = '#000000') => {
                 const parent = canvas.parentElement;
                 if (!parent) return;
@@ -443,7 +403,7 @@
             const stopClientDrawing = () => stopDraw(clientCanvasRef, setClientSignature, setIsClientDrawing);
             const clearClientCanvas = () => clearCanvasFn(clientCanvasRef, setClientSignature);
 
-            // --- ACTIONS ---
+            // ... (Actions, Save/Load Profile, License logic similar to before)
             const addItem = () => setItems([...items, { id: Date.now(), description: '', qtd: 1, price: 0 }]);
             const updateItem = (id, field, value) => setItems(prevItems => prevItems.map(i => i.id === id ? { ...i, [field]: value } : i));
             const removeItem = (id) => setItems(prevItems => prevItems.filter(i => i.id !== id));
@@ -467,72 +427,39 @@
                 localStorage.setItem('nexus_receipts_history', JSON.stringify(updatedHistory));
             };
 
-            // --- PROFILE MANAGEMENT ---
             const saveProfile = () => {
                 if (!company.name) {
                     showToast("Digite o nome da empresa para salvar.", "error");
                     return;
                 }
-
-                const profileData = {
-                    company: { ...company, date: null, time: null }, 
-                    signature,
-                    design
-                };
-
+                const profileData = { company: { ...company, date: null, time: null }, signature, design };
                 let updatedProfiles;
                 let newId = activeProfileId;
-
                 try {
                     if (activeProfileId) {
-                        updatedProfiles = profiles.map(p => 
-                            p.id === activeProfileId 
-                            ? { ...p, ...profileData, name: company.name, updatedAt: new Date().toISOString() } 
-                            : p
-                        );
+                        updatedProfiles = profiles.map(p => p.id === activeProfileId ? { ...p, ...profileData, name: company.name, updatedAt: new Date().toISOString() } : p);
                         showToast("Perfil atualizado com sucesso!");
                     } else {
                         newId = Date.now().toString();
-                        const newProfile = { 
-                            id: newId, 
-                            name: company.name, 
-                            ...profileData,
-                            createdAt: new Date().toISOString() 
-                        };
+                        const newProfile = { id: newId, name: company.name, ...profileData, createdAt: new Date().toISOString() };
                         updatedProfiles = [...profiles, newProfile];
                         showToast("Nova empresa salva com sucesso!");
                     }
-
                     localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setProfiles(updatedProfiles);
                     setActiveProfileId(newId);
-
                 } catch (e) {
-                    if (e.name === 'QuotaExceededError') {
-                        showToast("Espaço cheio! Tente usar imagens menores ou apagar perfis antigos.", "error");
-                    } else {
-                        showToast("Erro ao salvar perfil.", "error");
-                    }
+                    if (e.name === 'QuotaExceededError') showToast("Espaço cheio! Tente usar imagens menores ou apagar perfis antigos.", "error");
+                    else showToast("Erro ao salvar perfil.", "error");
                 }
             };
 
             const loadProfile = (id) => {
-                if (!id) {
-                    setActiveProfileId(null);
-                    return;
-                }
-
+                if (!id) { setActiveProfileId(null); return; }
                 const profile = profiles.find(p => p.id === id);
                 if (profile) {
                     confirmAction("Carregar este perfil substituirá os dados atuais do emissor. Continuar?", () => {
-                        if (profile.company) {
-                            setCompany(prev => ({
-                                ...prev, 
-                                ...profile.company, 
-                                date: new Date().toISOString().split('T')[0],
-                                time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                            }));
-                        }
+                        if (profile.company) setCompany(prev => ({ ...prev, ...profile.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
                         if (profile.signature) setSignature(profile.signature);
                         if (profile.design) setDesign(profile.design);
                         setActiveProfileId(id);
@@ -591,31 +518,19 @@
                 showToast("Recibo salvo no histórico!"); 
             };
             
-            // --- INSTALAÇÃO PWA ---
             const handleInstall = async () => {
                 if (!installPrompt) return;
                 installPrompt.prompt();
                 const { outcome } = await installPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    setInstallPrompt(null);
-                }
+                if (outcome === 'accepted') setInstallPrompt(null);
             };
 
-            // --- COPY FALLBACK FUNCTION ---
             const copyToClipboard = (text) => {
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(text).then(() => {
-                            showToast("Copiado com sucesso!");
-                        }).catch(err => {
-                            fallbackCopy(text);
-                        });
-                    } else {
-                        fallbackCopy(text);
-                    }
-                } catch (e) {
-                    fallbackCopy(text);
-                }
+                        navigator.clipboard.writeText(text).then(() => showToast("Copiado com sucesso!")).catch(err => fallbackCopy(text));
+                    } else fallbackCopy(text);
+                } catch (e) { fallbackCopy(text); }
             };
 
             const fallbackCopy = (text) => {
@@ -628,30 +543,23 @@
                 document.body.appendChild(textArea);
                 textArea.focus();
                 textArea.select();
-
                 try {
                     const successful = document.execCommand('copy');
                     if (successful) showToast("Copiado com sucesso!");
                     else showToast("Não foi possível copiar automaticamente. Selecione e copie.", "error");
-                } catch (err) {
-                    showToast("Erro ao copiar manual.", "error");
-                }
+                } catch (err) { showToast("Erro ao copiar manual.", "error"); }
                 document.body.removeChild(textArea);
             };
 
-            // --- PDF Generation and Sharing Logic ---
             const generatePDFBlob = async () => {
                 const { jsPDF } = window.jspdf;
                 const pages = document.querySelectorAll('.receipt-page');
                 if (pages.length === 0) return null;
-
                 const pdf = new jsPDF('p', 'mm', 'a4');
                 const pdfWidth = 210;
                 const pdfHeight = 297;
-
                 for (let i = 0; i < pages.length; i++) {
                     const page = pages[i];
-                    
                     const clone = page.cloneNode(true);
                     clone.style.transform = 'none';
                     clone.style.position = 'fixed';
@@ -659,248 +567,94 @@
                     clone.style.left = '0';
                     clone.style.zIndex = '-9999';
                     document.body.appendChild(clone);
-
                     await new Promise(r => setTimeout(r, 100));
-
-                    const canvas = await html2canvas(clone, {
-                        scale: 2, 
-                        useCORS: true,
-                        logging: false
-                    });
-                    
+                    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, logging: false });
                     document.body.removeChild(clone);
-
                     const imgData = canvas.toDataURL('image/jpeg', 0.9);
-                    
                     if (i > 0) pdf.addPage();
                     pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
                 }
-
                 return pdf.output('blob');
             };
 
             const handleShareAction = async (method) => {
                 if (!checkUsageLimit()) return;
-                
                 setIsGeneratingPdf(true);
                 setShowShareMenu(false); 
-                
                 try {
                     let preOpenedWindow = null;
                     if (method === 'whatsapp' || method === 'email') {
                          preOpenedWindow = window.open('', '_blank');
                          if (preOpenedWindow) {
-                             preOpenedWindow.document.write(`
-                                <html>
-                                    <head><title>A gerar...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-center;height:100vh;background:#f8fafc;color:#475569;margin:0;}</style></head>
-                                    <body>
-                                        <div style="text-align:center">
-                                            <div style="margin-bottom:10px;font-weight:bold;font-size:18px;">A gerar o seu documento...</div>
-                                            <div style="font-size:14px;">Por favor, aguarde o download do PDF.</div>
-                                        </div>
-                                    </body>
-                                </html>
-                             `);
+                             preOpenedWindow.document.write(`<html><head><title>A gerar...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-center;height:100vh;background:#f8fafc;color:#475569;margin:0;}</style></head><body><div style="text-align:center"><div style="margin-bottom:10px;font-weight:bold;font-size:18px;">A gerar o seu documento...</div><div style="font-size:14px;">Por favor, aguarde o download do PDF.</div></div></body></html>`);
                          }
                     }
-
                     if (activeTab !== 'preview' && window.innerWidth < 1024) {
                        setActiveTab('preview');
                        await new Promise(r => setTimeout(r, 500));
                     }
-                    
                     const pdfBlob = await generatePDFBlob();
-                    
                     if (!pdfBlob) {
                         showToast("Erro ao gerar PDF.", "error");
                         if(preOpenedWindow) preOpenedWindow.close();
                         setIsGeneratingPdf(false);
                         return;
                     }
-
                     const sanitizedClientName = (client.name || 'Cliente').replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '').trim();
                     const fileName = `Recibo - ${sanitizedClientName}.pdf`;
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-                    
                     incrementUsage(); 
-
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(pdfBlob);
                     link.download = fileName;
                     link.click();
-
                     if (method === 'whatsapp') {
                         let phone = client.phone.replace(/\D/g, '');
-                        if (phone.length >= 10 && phone.length <= 11) {
-                            phone = '55' + phone;
-                        }
-                        
+                        if (phone.length >= 10 && phone.length <= 11) phone = '55' + phone;
                         const text = `Olá ${client.name || 'Cliente'}, segue em anexo o recibo de ${company.name}. Gratidão pela preferência e estamos à disposição!`;
                         const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-                        
-                        if (preOpenedWindow) {
-                             preOpenedWindow.location.href = url;
-                        } else {
-                             window.location.href = url;
-                        }
-
+                        if (preOpenedWindow) preOpenedWindow.location.href = url; else window.location.href = url;
                     } else if (method === 'email') {
                         const subject = `Recibo - ${company.name}`;
                         const body = `Olá ${client.name || 'Cliente'},\n\nSegue em anexo o recibo.\n\nAtenciosamente,\n${company.name}`;
                         const mailto = `mailto:${client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                        
-                        if (preOpenedWindow) {
-                             preOpenedWindow.location.href = mailto;
-                             setTimeout(() => { if(!preOpenedWindow.closed) preOpenedWindow.close(); }, 2000);
-                        } else {
-                             window.location.href = mailto;
-                        }
-
+                        if (preOpenedWindow) { preOpenedWindow.location.href = mailto; setTimeout(() => { if(!preOpenedWindow.closed) preOpenedWindow.close(); }, 2000); } else window.location.href = mailto;
                     } else if (method === 'native') {
                          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                            try {
-                                await navigator.share({
-                                    files: [file],
-                                    title: 'Recibo',
-                                    text: `Recibo de ${company.name}`
-                                });
-                            } catch (err) {
-                                if (err.name !== 'AbortError') showToast("Erro na partilha nativa.", "error");
-                            }
-                        } else {
-                            showToast("Partilha nativa não suportada. Ficheiro descarregado.", "error");
-                        }
+                            try { await navigator.share({ files: [file], title: 'Recibo', text: `Recibo de ${company.name}` }); } catch (err) { if (err.name !== 'AbortError') showToast("Erro na partilha nativa.", "error"); }
+                        } else showToast("Partilha nativa não suportada. Ficheiro descarregado.", "error");
                     }
-
-                } catch (error) {
-                    console.error("Erro:", error);
-                    showToast("Ocorreu um erro inesperado.", "error");
-                } finally {
-                    setIsGeneratingPdf(false);
-                }
+                } catch (error) { console.error("Erro:", error); showToast("Ocorreu um erro inesperado.", "error"); } finally { setIsGeneratingPdf(false); }
             };
-
 
             const applyTheme = (themeId) => { const theme = THEMES.find(t => t.id === themeId); if (theme) { setDesign(prev => ({ ...prev, themeId: theme.id, primaryColor: theme.primary, secondaryColor: theme.secondary, textColor: theme.text, backgroundColor: theme.bg, headerColor: theme.headerBg, headerTextColor: theme.headerText })); } };
-            
-            const deleteReceipt = (id) => {
-                confirmAction("Tem certeza que deseja excluir este recibo do histórico?", () => {
-                    const updated = savedReceipts.filter(r => r.id !== id);
-                    setSavedReceipts(updated);
-                    localStorage.setItem('nexus_receipts_history', JSON.stringify(updated));
-                    showToast("Recibo excluído.");
-                });
-            };
-
-            const handleLoadReceipt = (receipt) => {
-                confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => {
-                    setCompany(receipt.company);
-                    setClient(receipt.client);
-                    setItems(receipt.items);
-                    setControlNumber(receipt.controlNumber);
-                    setActiveTab('edit');
-                    showToast("Recibo carregado.");
-                });
-            };
-
-            const exportData = () => { 
-                const dataToExport = { 
-                    deviceId, 
-                    receiptCount, 
-                    savedReceipts, 
-                    company, 
-                    profiles
-                }; 
-                const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' }); 
-                const url = URL.createObjectURL(blob); 
-                const a = document.createElement('a'); 
-                a.href = url; 
-                a.download = `nexus_backup_${new Date().toISOString().split('T')[0]}.json`; 
-                a.click(); 
-                URL.revokeObjectURL(url); 
-            };
-            
-            const importData = (e) => { 
-                const file = e.target.files[0]; 
-                if (!file) return; 
-                const reader = new FileReader(); 
-                reader.onload = (ev) => { 
-                    try { 
-                        const imported = JSON.parse(ev.target.result); 
-                        
-                        if (imported.savedReceipts) { 
-                            setSavedReceipts(imported.savedReceipts); 
-                            localStorage.setItem('nexus_receipts_history', JSON.stringify(imported.savedReceipts)); 
-                        } 
-                        
-                        if (imported.profiles) {
-                            setProfiles(imported.profiles);
-                            localStorage.setItem('nexus_company_profiles', JSON.stringify(imported.profiles));
-                        }
-
-                        if (imported.company) setCompany(imported.company); 
-                        
-                        showToast("Dados e empresas importados com sucesso!"); 
-                        setShowSettingsModal(false); 
-                    } catch(err) { 
-                        showToast("Erro ao importar arquivo. Formato inválido.", "error"); 
-                    } 
-                }; 
-                reader.readAsText(file); 
-            };
-            
+            const deleteReceipt = (id) => { confirmAction("Tem certeza que deseja excluir este recibo do histórico?", () => { const updated = savedReceipts.filter(r => r.id !== id); setSavedReceipts(updated); localStorage.setItem('nexus_receipts_history', JSON.stringify(updated)); showToast("Recibo excluído."); }); };
+            const handleLoadReceipt = (receipt) => { confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => { setCompany(receipt.company); setClient(receipt.client); setItems(receipt.items); setControlNumber(receipt.controlNumber); setActiveTab('edit'); showToast("Recibo carregado."); }); };
+            const exportData = () => { const dataToExport = { deviceId, receiptCount, savedReceipts, company, profiles }; const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `nexus_backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url); };
+            const importData = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const imported = JSON.parse(ev.target.result); if (imported.savedReceipts) { setSavedReceipts(imported.savedReceipts); localStorage.setItem('nexus_receipts_history', JSON.stringify(imported.savedReceipts)); } if (imported.profiles) { setProfiles(imported.profiles); localStorage.setItem('nexus_company_profiles', JSON.stringify(imported.profiles)); } if (imported.company) setCompany(imported.company); showToast("Dados e empresas importados com sucesso!"); setShowSettingsModal(false); } catch(err) { showToast("Erro ao importar arquivo. Formato inválido.", "error"); } }; reader.readAsText(file); };
             const getWhatsAppLink = () => { const text = `Olá, gostaria de comprar a licença do App Nexus Nota de Vendas.\n\nMeu ID de Dispositivo é: *${deviceId}*\n\nPor favor, aguardo o código de ativação.`; return `https://wa.me/558899361992?text=${encodeURIComponent(text)}`; };
+            const getSocialIcon = (type, size = 10) => { switch(type) { case 'instagram': return <Instagram size={size} className="inline"/>; case 'facebook': return <Facebook size={size} className="inline"/>; default: return <Globe size={size} className="inline"/>; } };
 
-            const getSocialIcon = (type, size = 10) => {
-                switch(type) {
-                    case 'instagram': return <Instagram size={size} className="inline"/>;
-                    case 'facebook': return <Facebook size={size} className="inline"/>;
-                    default: return <Globe size={size} className="inline"/>;
-                }
-            };
-
-            // --- EFFECTS ---
             useEffect(() => {
-                // --- PWA LISTENER ---
-                const handler = (e) => {
-                    e.preventDefault();
-                    setInstallPrompt(e);
-                    console.log("PWA install prompt intercepted");
-                };
+                const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
                 window.addEventListener('beforeinstallprompt', handler);
-                
                 let storedId = localStorage.getItem('nexus_device_id');
-                if (!storedId) {
-                    storedId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
-                    localStorage.setItem('nexus_device_id', storedId.toUpperCase());
-                }
+                if (!storedId) { storedId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10); localStorage.setItem('nexus_device_id', storedId.toUpperCase()); }
                 setDeviceId(storedId.toUpperCase());
                 const storedLicense = localStorage.getItem('nexus_license_key');
                 if (storedLicense && storedLicense === generateLicenseHash(storedId.toUpperCase())) { setIsLicensed(true); setLicenseKey(storedLicense); }
                 setReceiptCount(parseInt(localStorage.getItem('nexus_receipt_count') || '0'));
                 try { setSavedReceipts(JSON.parse(localStorage.getItem('nexus_receipts_history')) || []); } catch(e) {}
-
-                // Load Company Profiles (Multi-profile Support)
                 try {
                     const savedProfiles = localStorage.getItem('nexus_company_profiles');
                     let profilesList = [];
-
-                    if (savedProfiles) {
-                        profilesList = JSON.parse(savedProfiles);
-                    } else {
-                        // Migration from old single profile system
+                    if (savedProfiles) { profilesList = JSON.parse(savedProfiles); } else {
                         const legacyProfile = localStorage.getItem('nexus_company_profile');
                         if (legacyProfile) {
                             const parsed = JSON.parse(legacyProfile);
-                            const newProfile = {
-                                id: Date.now().toString(),
-                                name: parsed.company?.name || 'Minha Empresa',
-                                ...parsed,
-                                createdAt: new Date().toISOString()
-                            };
+                            const newProfile = { id: Date.now().toString(), name: parsed.company?.name || 'Minha Empresa', ...parsed, createdAt: new Date().toISOString() };
                             profilesList = [newProfile];
                             localStorage.setItem('nexus_company_profiles', JSON.stringify(profilesList));
-                            
                             setCompany(prev => ({ ...prev, ...parsed.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
                             if(parsed.signature) setSignature(parsed.signature);
                             if(parsed.design) setDesign(parsed.design);
@@ -908,59 +662,30 @@
                         }
                     }
                     setProfiles(profilesList);
-                } catch (e) {
-                    console.error("Erro ao carregar perfis", e);
-                }
+                } catch (e) {}
 
                 const handleResize = () => {
                     if (window.innerWidth < 768) {
                         const newZoom = (window.innerWidth - 32) / 820; 
                         setZoom(Math.max(0.3, Math.min(newZoom, 1.0)));
-                    } else {
-                       setZoom(0.85); 
-                    }
+                    } else { setZoom(0.85); }
                 };
-                
                 handleResize(); 
-                
                 const resizeObserver = new ResizeObserver(() => {
                      if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor);
                      if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor);
                 });
-
                 window.addEventListener('resize', handleResize);
-                
-                // REGISTER SERVICE WORKER
                 if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
-                    navigator.serviceWorker.register('./service-worker.js')
-                    .then(reg => console.log('Service Worker registrado!', reg))
-                    .catch(err => console.warn('Falha no registro do SW (pode ser ignorado em desenvolvimento):', err));
+                    navigator.serviceWorker.register('./service-worker.js').catch(err => console.warn(err));
                 }
-                
-                return () => {
-                    window.removeEventListener('resize', handleResize);
-                    window.removeEventListener('beforeinstallprompt', handler); // Clean up PWA listener
-                    resizeObserver.disconnect();
-                };
+                return () => { window.removeEventListener('resize', handleResize); window.removeEventListener('beforeinstallprompt', handler); resizeObserver.disconnect(); };
             }, []);
 
-            useEffect(() => { 
-                const timeoutId = setTimeout(() => {
-                     if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor); 
-                }, 100);
-                return () => clearTimeout(timeoutId);
-            }, [activeTab, signature.type, penColor, layoutMode]);
-
-            useEffect(() => { 
-                const timeoutId = setTimeout(() => {
-                    if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor); 
-                }, 100);
-                return () => clearTimeout(timeoutId);
-            }, [activeTab, clientSignature.type, penColor, layoutMode]);
-
+            useEffect(() => { const timeoutId = setTimeout(() => { if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor); }, 100); return () => clearTimeout(timeoutId); }, [activeTab, signature.type, penColor, layoutMode]);
+            useEffect(() => { const timeoutId = setTimeout(() => { if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor); }, 100); return () => clearTimeout(timeoutId); }, [activeTab, clientSignature.type, penColor, layoutMode]);
             useEffect(() => { if (editorRef.current) editorRef.current.scrollTop = 0; }, [layoutMode, activeTab]);
 
-            // --- MEMOS ---
             const filteredReceipts = useMemo(() => {
                 const now = new Date();
                 const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -975,79 +700,42 @@
             }, [savedReceipts, filterPeriod, searchQuery]);
 
             const filteredTotal = filteredReceipts.reduce((acc, r) => acc + (r.total || 0), 0);
-            
             const subtotal = items.reduce((acc, i) => acc + (i.qtd * i.price), 0);
             const discountValue = subtotal * (discount / 100);
             const total = Math.max(0, subtotal - discountValue);
-
             const remainingCredits = Math.max(0, 1 - receiptCount);
 
-            // --- PAGINAÇÃO ---
             const pages = useMemo(() => {
-                const CHARS_PER_LINE = 38; 
-                const LINE_WEIGHT = 1;     
-                
-                const MAX_WEIGHT_FIRST_PAGE = 20; 
-                const MAX_WEIGHT_OTHER_PAGE = 27; 
-                const FOOTER_WEIGHT = 11; 
-
-                let generatedPages = [];
-                let currentItems = [];
-                let currentWeight = 0;
-                let isFirstPage = true;
-                let remainingItems = [...items];
-
+                const CHARS_PER_LINE = 38; const LINE_WEIGHT = 1; const MAX_WEIGHT_FIRST_PAGE = 20; const MAX_WEIGHT_OTHER_PAGE = 27; const FOOTER_WEIGHT = 11;
+                let generatedPages = []; let currentItems = []; let currentWeight = 0; let isFirstPage = true; let remainingItems = [...items];
                 for (let i = 0; i < remainingItems.length; i++) {
                     const item = remainingItems[i];
                     const descLength = item.description ? item.description.length : 0;
                     const lines = Math.max(1, Math.ceil(descLength / CHARS_PER_LINE)); 
                     const itemWeight = lines * LINE_WEIGHT;
                     const maxWeight = isFirstPage ? MAX_WEIGHT_FIRST_PAGE : MAX_WEIGHT_OTHER_PAGE;
-
-                    if (currentWeight + itemWeight <= maxWeight) {
-                        currentItems.push(item);
-                        currentWeight += itemWeight;
-                    } else {
-                        generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false });
-                        currentItems = [item];
-                        currentWeight = itemWeight;
-                        isFirstPage = false;
-                    }
+                    if (currentWeight + itemWeight <= maxWeight) { currentItems.push(item); currentWeight += itemWeight; } 
+                    else { generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false }); currentItems = [item]; currentWeight = itemWeight; isFirstPage = false; }
                 }
-
                 const maxWeightLast = isFirstPage ? MAX_WEIGHT_FIRST_PAGE : MAX_WEIGHT_OTHER_PAGE;
-                
-                if (currentWeight + FOOTER_WEIGHT > maxWeightLast) {
-                    generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false });
-                    generatedPages.push({ items: [], pageIndex: generatedPages.length, isFirst: false, isLast: true });
-                } else {
-                    generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: true });
-                }
+                if (currentWeight + FOOTER_WEIGHT > maxWeightLast) { generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: false }); generatedPages.push({ items: [], pageIndex: generatedPages.length, isFirst: false, isLast: true }); } 
+                else { generatedPages.push({ items: [...currentItems], pageIndex: generatedPages.length, isFirst: isFirstPage, isLast: true }); }
                 return generatedPages;
             }, [items]);
 
-            // --- RENDER ---
             return (
-                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-screen' : 'min-h-screen lg:h-screen lg:overflow-hidden'}`}>
+                <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-[100dvh]' : 'min-h-[100dvh] lg:h-screen lg:overflow-hidden'}`}>
                     
-                    {/* LOADING OVERLAY */}
-                    {isGeneratingPdf && (
-                        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white">
-                            <div className="loader mb-4"></div>
-                            <p className="text-lg font-bold animate-pulse">Gerando PDF...</p>
-                            <p className="text-sm text-slate-300">A preparar ficheiro</p>
-                        </div>
-                    )}
+                    {isGeneratingPdf && ( <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white"> <div className="loader mb-4"></div> <p className="text-lg font-bold animate-pulse">Gerando PDF...</p> <p className="text-sm text-slate-300">A preparar ficheiro</p> </div> )}
 
-                    {/* MODAL CONFIG */}
                     {showSettingsModal && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm print:hidden">
                             <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 relative animate-in fade-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
-                                <button type="button" onClick={() => setShowSettingsModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><span className="sr-only">Fechar</span><IconBase size={24}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase></button>
+                                <button type="button" onClick={() => setShowSettingsModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><span className="sr-only">Fechar</span><X size={24} /></button>
                                 <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Settings className="text-slate-600" /> Configurações & Licença</h2>
                                 <div className="mb-8 border-b border-slate-100 pb-6">
                                     <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">{isLicensed ? <CheckCircle2 className="text-green-500" size={16}/> : <Lock className="text-orange-500" size={16}/>} Status da Licença</h3>
-                                    {!isLicensed && (<div className="bg-orange-50 text-orange-800 p-3 rounded-lg text-sm mb-4 border border-orange-100">Você está usando a versão gratuita. Restam <strong>{1 - receiptCount > 0 ? 1 - receiptCount : 0}</strong> recibos.</div>)}
+                                    {!isLicensed && (<div className="bg-orange-50 text-orange-800 p-3 rounded-lg text-sm mb-4 border border-orange-100">Você está usando a versão gratuita. Restam <strong>{remainingCredits}</strong> recibos.</div>)}
                                     <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4"><label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block">ID do Dispositivo</label><div className="flex gap-2"><code className="flex-1 bg-white border border-slate-300 rounded px-3 py-2 font-mono text-sm text-slate-700">{deviceId}</code><button type="button" onClick={() => copyToClipboard(deviceId)} className="p-2 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600" title="Copiar"><Copy size={16} /></button></div></div>
                                     {!isLicensed && (<div className="space-y-3"><a href={getWhatsAppLink()} target="_blank" rel="noreferrer" className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors"><Smartphone size={16} /> Comprar Licença</a><div className="flex gap-2"><input type="text" placeholder="Chave de ativação" className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-sm outline-none" value={inputLicense} onChange={(e) => setInputLicense(e.target.value)} /><button type="button" onClick={validateLicense} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm">Ativar</button></div>{licenseError && <p className="text-xs text-red-500 font-medium">{licenseError}</p>}</div>)}
                                     {isLicensed && <p className="text-green-600 font-medium text-sm">Produto ativado e licenciado para este dispositivo.</p>}
@@ -1064,7 +752,6 @@
                         </div>
                     )}
 
-                    {/* Navbar */}
                     <header className="bg-white border-b border-slate-200 sticky top-0 z-50 print:hidden flex-shrink-0">
                         <div className="max-w-[1600px] mx-auto px-4 py-2 h-auto md:h-16 flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
                         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -1074,37 +761,9 @@
                             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                                 <span className="text-xs font-medium text-indigo-700">Nota de Venda</span>
                                 <span className="hidden sm:inline text-slate-300">|</span>
-                                
-                                {/* Status da Licença / Créditos */}
-                                {!isLicensed ? (
-                                    <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${remainingCredits > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                                        <Lock size={10} />
-                                        <span>Restam: {remainingCredits} recibo(s)</span>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200">
-                                        <CheckCircle2 size={10} />
-                                        <span>Licença Premium</span>
-                                    </div>
-                                )}
-
+                                {!isLicensed ? ( <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${remainingCredits > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}><Lock size={10} /><span>Restam: {remainingCredits} recibo(s)</span></div> ) : ( <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"><CheckCircle2 size={10} /><span>Licença Premium</span></div> )}
                                 <span className="hidden sm:inline text-slate-300">|</span>
-                                
-                                {/* BOTÃO DE INSTALAÇÃO DO APP (SÓ APARECE SE DISPONÍVEL) */}
-                                {installPrompt && (
-                                    <>
-                                    <button 
-                                        type="button" 
-                                        onClick={handleInstall} 
-                                        className="flex items-center gap-1 text-[10px] text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-full border border-indigo-600 font-bold transition-colors animate-pulse shadow-md"
-                                        title="Instalar App Nexus"
-                                    >
-                                        <Download size={12} /> Instalar App
-                                    </button>
-                                    <span className="hidden sm:inline text-slate-300">|</span>
-                                    </>
-                                )}
-
+                                {installPrompt && ( <> <button type="button" onClick={handleInstall} className="flex items-center gap-1 text-[10px] text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-full border border-indigo-600 font-bold transition-colors animate-pulse shadow-md" title="Instalar App Nexus"><Download size={12} /> Instalar App</button> <span className="hidden sm:inline text-slate-300">|</span> </> )}
                                 <button type="button" onClick={() => setShowSettingsModal(true)} className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-full border border-slate-200 font-bold transition-colors"><Settings size={10} /> Configurações</button>
                             </div>
                             </div>
@@ -1117,129 +776,43 @@
                                 <div className="w-px bg-slate-300 mx-1"></div>
                                 <button type="button" onClick={() => setActiveTab('history')} className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Histórico"><History size={18}/><span className="text-xs font-bold hidden sm:inline">Histórico</span></button>
                             </div>
-                            
                             <div className="relative">
-                                <button 
-                                    type="button" 
-                                    onClick={() => isLicensed || receiptCount < 1 ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} 
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700"
-                                >
-                                    {!isLicensed && receiptCount >= 1 ? <Lock size={14} className="text-orange-500"/> : <Share2 size={18} />}
-                                    <span className="hidden sm:inline">Enviar</span>
-                                </button>
-
-                                {showShareMenu && (
-                                    <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50">
-                                        <div className="p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700 mb-2 border border-yellow-100">
-                                            1º O PDF será baixado.<br/>2º Anexe-o no App que abrir.
-                                        </div>
-                                        
-                                        <button 
-                                            onClick={() => handleShareAction('whatsapp')} 
-                                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><Smartphone size={16} /></div>
-                                            WhatsApp
-                                        </button>
-                                        
-                                        <button 
-                                            onClick={() => handleShareAction('email')} 
-                                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Mail size={16} /></div>
-                                            E-mail
-                                        </button>
-
-                                        <button 
-                                            onClick={() => handleShareAction('native')} 
-                                            className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"
-                                        >
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"><Share2 size={16} /></div>
-                                            Outros Apps
-                                        </button>
-                                    </div>
-                                )}
+                                <button type="button" onClick={() => isLicensed || receiptCount < 1 ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700"> {!isLicensed && receiptCount >= 1 ? <Lock size={14} className="text-orange-500"/> : <Share2 size={18} />} <span className="hidden sm:inline">Enviar</span> </button>
+                                {showShareMenu && ( <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50"> <div className="p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700 mb-2 border border-yellow-100"> 1º O PDF será baixado.<br/>2º Anexe-o no App que abrir. </div> <button onClick={() => handleShareAction('whatsapp')} className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"> <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><Smartphone size={16} /></div> WhatsApp </button> <button onClick={() => handleShareAction('email')} className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"> <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Mail size={16} /></div> E-mail </button> <button onClick={() => handleShareAction('native')} className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"> <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"><Share2 size={16} /></div> Outros Apps </button> </div> )}
                             </div>
-
-                            <button type="button" onClick={handlePrintAction} className={`flex items-center gap-2 text-white px-5 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm ${!isLicensed && receiptCount >= 1 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-800'}`}>
-                            {!isLicensed && receiptCount >= 1 ? <Lock size={18} /> : <Printer size={18} />}<span className="hidden sm:inline">Imprimir</span>
-                            </button>
+                            <button type="button" onClick={handlePrintAction} className={`flex items-center gap-2 text-white px-5 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm ${!isLicensed && receiptCount >= 1 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-800'}`}> {!isLicensed && receiptCount >= 1 ? <Lock size={18} /> : <Printer size={18} />}<span className="hidden sm:inline">Imprimir</span> </button>
                         </div>
                         </div>
                     </header>
 
-                    {/* MAIN CONTENT */}
                     <main className={`flex-1 max-w-[1600px] mx-auto w-full p-4 md:p-6 flex flex-col gap-6 ${layoutMode === 'side' && activeTab !== 'history' ? 'lg:flex-row lg:overflow-hidden' : 'lg:flex-col lg:h-auto'}`}>
-                        
-                        {/* HISTORY TAB */}
                         {activeTab === 'history' && (
                             <div className="w-full flex flex-col gap-6 h-full">
-                                
                                 <div className="flex items-center gap-4 pb-2 border-b border-slate-200">
-                                    <button 
-                                        type="button"
-                                        onClick={() => setActiveTab('edit')} 
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-300 hover:shadow-md transition-all font-bold text-sm shadow-sm"
-                                    >
-                                        <ArrowLeft size={18} /> Voltar para o Editor
-                                    </button>
+                                    <button type="button" onClick={() => setActiveTab('edit')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-300 hover:shadow-md transition-all font-bold text-sm shadow-sm"><ArrowLeft size={18} /> Voltar para o Editor</button>
                                     <h2 className="text-xl font-bold text-slate-800">Histórico de Vendas</h2>
                                 </div>
-
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><FileText size={24} /></div>
-                                        <div><p className="text-sm text-slate-500 font-medium">Recibos Encontrados</p><p className="text-2xl font-bold text-slate-800">{filteredReceipts.length}</p></div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><DollarSign size={24} /></div>
-                                        <div><p className="text-sm text-slate-500 font-medium">Total Filtrado</p><p className="text-2xl font-bold text-slate-800">{formatCurrency(filteredTotal)}</p></div>
-                                    </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center gap-2">
-                                        <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buscar cliente, CPF, email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-                                        <div className="flex gap-2">
-                                            <button type="button" onClick={() => setFilterPeriod('all')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos</button>
-                                            <button type="button" onClick={() => setFilterPeriod('today')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'today' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Hoje</button>
-                                            <button type="button" onClick={() => setFilterPeriod('week')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Semana</button>
-                                            <button type="button" onClick={() => setFilterPeriod('month')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'month' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Mês</button>
-                                        </div>
-                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4"> <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><FileText size={24} /></div> <div><p className="text-sm text-slate-500 font-medium">Recibos Encontrados</p><p className="text-2xl font-bold text-slate-800">{filteredReceipts.length}</p></div> </div>
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4"> <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><DollarSign size={24} /></div> <div><p className="text-sm text-slate-500 font-medium">Total Filtrado</p><p className="text-2xl font-bold text-slate-800">{formatCurrency(filteredTotal)}</p></div> </div>
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center gap-2"> <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buscar cliente, CPF, email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div> <div className="flex gap-2"> <button type="button" onClick={() => setFilterPeriod('all')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos</button> <button type="button" onClick={() => setFilterPeriod('today')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'today' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Hoje</button> <button type="button" onClick={() => setFilterPeriod('week')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Semana</button> <button type="button" onClick={() => setFilterPeriod('month')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'month' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Mês</button> </div> </div>
                                 </div>
-
                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col">
-                                    <div className="p-4 border-b border-slate-100 bg-slate-50 font-medium text-xs text-slate-500 uppercase tracking-wider flex">
-                                        <div className="w-24">Data</div><div className="w-20">Nº Ctrl</div><div className="flex-1">Cliente</div><div className="flex-1 hidden md:block">Contato</div><div className="w-32 text-right">Valor</div><div className="w-32 text-center">Ações</div>
-                                    </div>
+                                    <div className="p-4 border-b border-slate-100 bg-slate-50 font-medium text-xs text-slate-500 uppercase tracking-wider flex"> <div className="w-24">Data</div><div className="w-20">Nº Ctrl</div><div className="flex-1">Cliente</div><div className="flex-1 hidden md:block">Contato</div><div className="w-32 text-right">Valor</div><div className="w-32 text-center">Ações</div> </div>
                                     <div className="overflow-y-auto flex-1 custom-scrollbar">
-                                        {filteredReceipts.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center h-64 text-slate-400"><List size={48} className="mb-2 opacity-20" /><p>Nenhum recibo encontrado.</p></div>
-                                        ) : (
-                                            filteredReceipts.map(receipt => (
-                                                <div key={receipt.id} className="p-4 border-b border-slate-50 flex items-center hover:bg-slate-50 transition-colors text-sm">
-                                                    <div className="w-24 text-slate-500">{new Date(receipt.createdAt).toLocaleDateString('pt-BR')}</div>
-                                                    <div className="w-20 font-mono text-slate-600">#{receipt.controlNumber}</div>
-                                                    <div className="flex-1 font-medium text-slate-800">{receipt.client.name}<div className="text-[10px] text-slate-400 font-normal">{receipt.client.doc}</div></div>
-                                                    <div className="flex-1 hidden md:block text-slate-500 text-xs"><div>{receipt.client.phone}</div><div>{receipt.client.email}</div></div>
-                                                    <div className="w-32 text-right font-bold text-slate-700">{formatCurrency(receipt.total)}</div>
-                                                    <div className="w-32 flex justify-center gap-2">
-                                                        <button type="button" onClick={() => handleLoadReceipt(receipt)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md" title="Carregar"><PenTool size={16} /></button>
-                                                        <button type="button" onClick={() => deleteReceipt(receipt.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Excluir"><Trash2 size={16} /></button>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        )}
+                                        {filteredReceipts.length === 0 ? ( <div className="flex flex-col items-center justify-center h-64 text-slate-400"><List size={48} className="mb-2 opacity-20" /><p>Nenhum recibo encontrado.</p></div> ) : ( filteredReceipts.map(receipt => ( <div key={receipt.id} className="p-4 border-b border-slate-50 flex items-center hover:bg-slate-50 transition-colors text-sm"> <div className="w-24 text-slate-500">{new Date(receipt.createdAt).toLocaleDateString('pt-BR')}</div> <div className="w-20 font-mono text-slate-600">#{receipt.controlNumber}</div> <div className="flex-1 font-medium text-slate-800">{receipt.client.name}<div className="text-[10px] text-slate-400 font-normal">{receipt.client.doc}</div></div> <div className="flex-1 hidden md:block text-slate-500 text-xs"><div>{receipt.client.phone}</div><div>{receipt.client.email}</div></div> <div className="w-32 text-right font-bold text-slate-700">{formatCurrency(receipt.total)}</div> <div className="w-32 flex justify-center gap-2"> <button type="button" onClick={() => handleLoadReceipt(receipt)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md" title="Carregar"><PenTool size={16} /></button> <button type="button" onClick={() => deleteReceipt(receipt.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Excluir"><Trash2 size={16} /></button> </div> </div> )) )}
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* EDITOR & PREVIEW */}
                         {activeTab !== 'history' && (
                             <>
                                 <div ref={editorRef} className={`flex-shrink-0 flex flex-col gap-6 print:hidden ${activeTab === 'preview' ? 'hidden lg:flex' : 'flex'} ${layoutMode === 'side' ? 'lg:w-[450px] lg:h-full lg:overflow-y-auto custom-scrollbar pr-2' : 'w-full lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:items-start'}`}>
                                 <div className={`${layoutMode === 'side' ? 'flex flex-col gap-6' : 'contents'}`}>
                                     <button type="button" onClick={handleSaveAction} className={`w-full py-3 bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${layoutMode === 'stack' ? 'lg:col-span-full' : ''}`}><Save size={18} /> Salvar dados no Histórico</button>
 
+                                    {/* EDITOR SECTIONS (OMITTED CONTENT FOR BREVITY, SAME AS BEFORE) */}
                                     <EditorSection title="Estética & Tema" icon={Palette} colorClass="bg-indigo-500" borderColorClass="border-indigo-500" className="h-fit">
                                         <div>
                                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Paleta de Cores</label>
@@ -1270,51 +843,17 @@
                                     </EditorSection>
 
                                     <EditorSection title="Emissor & Logo" icon={Building2} colorClass="bg-blue-500" borderColorClass="border-blue-500" className="h-fit">
-                                        
-                                        {/* Multi-Company Management Section */}
                                         <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 mb-4">
                                             <div className="flex justify-between items-center mb-2">
-                                                <div className="flex items-center gap-1.5 text-blue-800">
-                                                    <Briefcase size={14} />
-                                                    <span className="text-xs font-bold uppercase tracking-wider">Gerir Empresas</span>
-                                                </div>
-                                                {activeProfileId && (
-                                                    <button type="button" onClick={deleteProfile} className="text-red-500 hover:text-red-700 text-[10px] font-medium flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-red-50">
-                                                        <Trash2 size={12}/> Excluir
-                                                    </button>
-                                                )}
+                                                <div className="flex items-center gap-1.5 text-blue-800"> <Briefcase size={14} /> <span className="text-xs font-bold uppercase tracking-wider">Gerir Empresas</span> </div>
+                                                {activeProfileId && ( <button type="button" onClick={deleteProfile} className="text-red-500 hover:text-red-700 text-[10px] font-medium flex items-center gap-1 transition-colors px-2 py-1 rounded hover:bg-red-50"> <Trash2 size={12}/> Excluir </button> )}
                                             </div>
                                             <div className="flex gap-2">
-                                                <div className="relative flex-1">
-                                                    <select 
-                                                        className="w-full text-sm border border-blue-200 rounded-lg pl-2 pr-8 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 bg-white appearance-none cursor-pointer text-slate-700 font-medium"
-                                                        value={activeProfileId || ''}
-                                                        onChange={(e) => loadProfile(e.target.value)}
-                                                    >
-                                                        <option value="">+ Nova Empresa (Vazio/Atual)</option>
-                                                        {profiles.map(p => (
-                                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400">
-                                                        <IconBase size={14}><polyline points="6 9 12 15 18 9"></polyline></IconBase>
-                                                    </div>
-                                                </div>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={saveProfile}
-                                                    className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all shadow-sm flex-shrink-0 ${activeProfileId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
-                                                >
-                                                    <Save size={14} /> {activeProfileId ? 'Atualizar' : 'Salvar Nova'}
-                                                </button>
+                                                <div className="relative flex-1"> <select className="w-full text-sm border border-blue-200 rounded-lg pl-2 pr-8 py-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 bg-white appearance-none cursor-pointer text-slate-700 font-medium" value={activeProfileId || ''} onChange={(e) => loadProfile(e.target.value)} > <option value="">+ Nova Empresa (Vazio/Atual)</option> {profiles.map(p => ( <option key={p.id} value={p.id}>{p.name}</option> ))} </select> <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400"> <IconBase size={14}><polyline points="6 9 12 15 18 9"></polyline></IconBase> </div> </div>
+                                                <button type="button" onClick={saveProfile} className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all shadow-sm flex-shrink-0 ${activeProfileId ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}> <Save size={14} /> {activeProfileId ? 'Atualizar' : 'Salvar Nova'} </button>
                                             </div>
-                                            <p className="text-[10px] text-blue-400 mt-1.5 ml-1">
-                                                {activeProfileId 
-                                                    ? "Edite os dados abaixo e clique em Atualizar para salvar as alterações nesta empresa." 
-                                                    : "Preencha os dados abaixo e clique em Salvar Nova para adicionar à sua lista."}
-                                            </p>
+                                            <p className="text-[10px] text-blue-400 mt-1.5 ml-1"> {activeProfileId ? "Edite os dados abaixo e clique em Atualizar para salvar as alterações nesta empresa." : "Preencha os dados abaixo e clique em Salvar Nova para adicionar à sua lista."} </p>
                                         </div>
-
                                         <div className="flex gap-4 items-start">
                                         <div className="flex flex-col gap-2 w-24 flex-shrink-0">
                                             <InputGroup label="Logo">
@@ -1359,23 +898,15 @@
                                                     <button onClick={() => setCompany({...company, socialType: 'instagram'})} className={`p-1.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold uppercase ${company.socialType === 'instagram' ? 'bg-pink-50 border-pink-200 text-pink-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} type="button"><Instagram size={14}/> Insta</button>
                                                     <button onClick={() => setCompany({...company, socialType: 'facebook'})} className={`p-1.5 rounded-lg border flex items-center gap-1 text-[10px] font-bold uppercase ${company.socialType === 'facebook' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`} type="button"><Facebook size={14}/> Face</button>
                                                 </div>
-                                                <div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400">
-                                                    {company.socialType === 'instagram' ? <Instagram size={14}/> : company.socialType === 'facebook' ? <Facebook size={14}/> : <Globe size={14}/>}
-                                                </div><input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder={company.socialType === 'instagram' ? '@usuario' : company.socialType === 'facebook' ? '/pagina' : 'www.site.com'} value={company.website} onChange={e => setCompany({...company, website: e.target.value})} /></div>
+                                                <div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"> {company.socialType === 'instagram' ? <Instagram size={14}/> : company.socialType === 'facebook' ? <Facebook size={14}/> : <Globe size={14}/>} </div><input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder={company.socialType === 'instagram' ? '@usuario' : company.socialType === 'facebook' ? '/pagina' : 'www.site.com'} value={company.website} onChange={e => setCompany({...company, website: e.target.value})} /></div>
                                             </InputGroup>
                                             
                                             <InputGroup label="Telefone / WhatsApp">
-                                                <div className="relative">
-                                                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"><Smartphone size={14}/></div>
-                                                    <input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="(00) 00000-0000" value={company.phone} onChange={e => setCompany({...company, phone: e.target.value})} />
-                                                </div>
+                                                <div className="relative"> <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"><Smartphone size={14}/></div> <input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="(00) 00000-0000" value={company.phone} onChange={e => setCompany({...company, phone: e.target.value})} /> </div>
                                             </InputGroup>
                                             
                                             <InputGroup label="E-mail">
-                                                <div className="relative">
-                                                    <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"><Mail size={14}/></div>
-                                                    <input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="contato@empresa.com" value={company.email} onChange={e => setCompany({...company, email: e.target.value})} />
-                                                </div>
+                                                <div className="relative"> <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400"><Mail size={14}/></div> <input className="w-full pl-8 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm" placeholder="contato@empresa.com" value={company.email} onChange={e => setCompany({...company, email: e.target.value})} /> </div>
                                             </InputGroup>
                                         </div>
                                     </EditorSection>
@@ -1383,18 +914,7 @@
                                     <EditorSection title="Cliente & Controle" icon={UserCheck} colorClass="bg-emerald-500" borderColorClass="border-emerald-500" className="h-fit">
                                         <InputGroup label="Nome do Cliente"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all" placeholder="Nome completo do cliente" value={client.name} onChange={e => setClient({...client, name: e.target.value})}/></InputGroup>
                                         <div className="flex gap-2">
-                                            <div className="w-24 flex-shrink-0">
-                                                <InputGroup label="Tipo">
-                                                    <select 
-                                                        className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 outline-none" 
-                                                        value={client.docType} 
-                                                        onChange={e => setClient({...client, docType: e.target.value})}
-                                                    >
-                                                        <option>CPF</option>
-                                                        <option>CNPJ</option>
-                                                    </select>
-                                                </InputGroup>
-                                            </div>
+                                            <div className="w-24 flex-shrink-0"> <InputGroup label="Tipo"> <select className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 outline-none" value={client.docType} onChange={e => setClient({...client, docType: e.target.value})} > <option>CPF</option> <option>CNPJ</option> </select> </InputGroup> </div>
                                             <div className="flex-1"><InputGroup label="Documento"><input className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none" placeholder="000.000.000-00" value={client.doc} onChange={e => setClient({...client, doc: e.target.value})}/></InputGroup></div>
                                             <div className="w-1/3 flex-shrink-0"><InputGroup label="Nº Controle"><div className="relative"><div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><Hash size={12} className="text-slate-400" /></div><input className="w-full pl-6 pr-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-mono" placeholder="0001" value={controlNumber} onChange={e => setControlNumber(e.target.value)}/></div></InputGroup></div>
                                         </div>
@@ -1405,10 +925,7 @@
                                     </EditorSection>
 
                                     <EditorSection title="Itens & Valores" icon={FileText} colorClass="bg-indigo-500" borderColorClass="border-indigo-500" className="h-fit">
-                                        <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs text-slate-400 font-medium">Lista de Produtos/Serviços</span>
-                                        <button type="button" onClick={addItem} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1"><Plus size={12} /> Adicionar</button>
-                                        </div>
+                                        <div className="flex justify-between items-center mb-2"> <span className="text-xs text-slate-400 font-medium">Lista de Produtos/Serviços</span> <button type="button" onClick={addItem} className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full hover:bg-indigo-100 font-medium transition-colors flex items-center gap-1"><Plus size={12} /> Adicionar</button> </div>
                                         <div className="space-y-3">
                                         {items.map((item, idx) => (
                                             <div key={item.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-200 transition-colors group">
@@ -1427,26 +944,8 @@
                                         </div>
                                         
                                         <div className="mt-4 pt-4 border-t border-slate-100 flex justify-end items-center gap-4">
-                                            <div className="w-32">
-                                                <InputGroup label="Desconto (%)">
-                                                    <div className="relative">
-                                                        <input 
-                                                            type="number" 
-                                                            min="0" 
-                                                            max="100" 
-                                                            className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-sm text-right font-bold text-red-500 outline-none focus:ring-2 focus:ring-indigo-500"
-                                                            value={discount} 
-                                                            onChange={e => setDiscount(Math.min(100, Math.max(0, Number(e.target.value))))} 
-                                                        />
-                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</div>
-                                                    </div>
-                                                </InputGroup>
-                                            </div>
-                                            <div className="w-40 text-right">
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Valor Total</p>
-                                                <p className="text-2xl font-bold text-indigo-600">{formatCurrency(total)}</p>
-                                                {discount > 0 && <p className="text-xs text-red-400 font-medium line-through">{formatCurrency(subtotal)}</p>}
-                                            </div>
+                                            <div className="w-32"> <InputGroup label="Desconto (%)"> <div className="relative"> <input type="number" min="0" max="100" className="w-full pl-3 pr-8 py-2 bg-white border border-slate-200 rounded-lg text-sm text-right font-bold text-red-500 outline-none focus:ring-2 focus:ring-indigo-500" value={discount} onChange={e => setDiscount(Math.min(100, Math.max(0, Number(e.target.value))))} /> <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">%</div> </div> </InputGroup> </div>
+                                            <div className="w-40 text-right"> <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Valor Total</p> <p className="text-2xl font-bold text-indigo-600">{formatCurrency(total)}</p> {discount > 0 && <p className="text-xs text-red-400 font-medium line-through">{formatCurrency(subtotal)}</p>} </div>
                                         </div>
                                     </EditorSection>
 
@@ -1458,40 +957,12 @@
                                     <EditorSection title="Assinaturas" icon={PenTool} colorClass="bg-orange-500" borderColorClass="border-orange-500" className="h-fit">
                                         <div className="space-y-2 mb-4">
                                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assinatura Emissor</label>
-                                            <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50 mb-2">
-                                            <button type="button" onClick={() => setSignature(p => ({...p, type: 'draw'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${signature.type === 'draw' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Desenhar</button>
-                                            <button type="button" onClick={() => setSignature(p => ({...p, type: 'upload'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${signature.type === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Upload</button>
-                                            </div>
-                                            {signature.type === 'draw' ? (
-                                            <div className="relative border border-slate-200 rounded-xl bg-white overflow-hidden h-32 group">
-                                                <canvas ref={canvasRef} className="w-full h-full cursor-crosshair touch-none" onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
-                                                <button type="button" onClick={clearCanvas} className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Eraser size={14} /></button>
-                                            </div>
-                                            ) : (
-                                            <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-slate-300 rounded-xl h-32 flex flex-col items-center justify-center text-slate-400 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all"><Upload size={20} className="mb-2"/><span className="text-xs">Clique para carregar</span><input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setSignature)} /></div>
-                                            )}
+                                            <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50 mb-2"> <button type="button" onClick={() => setSignature(p => ({...p, type: 'draw'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${signature.type === 'draw' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Desenhar</button> <button type="button" onClick={() => setSignature(p => ({...p, type: 'upload'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${signature.type === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Upload</button> </div>
+                                            {signature.type === 'draw' ? ( <div className="relative border border-slate-200 rounded-xl bg-white overflow-hidden h-32 group"> <canvas ref={canvasRef} className="w-full h-full cursor-crosshair touch-none" onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} /> <button type="button" onClick={clearCanvas} className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Eraser size={14} /></button> </div> ) : ( <div onClick={() => fileInputRef.current.click()} className="border-2 border-dashed border-slate-300 rounded-xl h-32 flex flex-col items-center justify-center text-slate-400 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all"><Upload size={20} className="mb-2"/><span className="text-xs">Clique para carregar</span><input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setSignature)} /></div> )}
                                         </div>
                                         <div className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assinatura Cliente</label>
-                                            <div className="flex items-center gap-2"><span className="text-xs text-slate-500">Incluir</span><div onClick={() => setClientSignature(p => ({...p, include: !p.include}))} className={`w-9 h-5 rounded-full p-0.5 cursor-pointer transition-colors ${clientSignature.include ? 'bg-orange-600' : 'bg-slate-300'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${clientSignature.include ? 'translate-x-4' : 'translate-x-0'}`}></div></div></div>
-                                            </div>
-                                            {clientSignature.include && (
-                                            <>
-                                                <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50 mb-2">
-                                                <button type="button" onClick={() => setClientSignature(p => ({...p, type: 'draw'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${clientSignature.type === 'draw' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Desenhar</button>
-                                                <button type="button" onClick={() => setClientSignature(p => ({...p, type: 'upload'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${clientSignature.type === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Upload</button>
-                                                </div>
-                                                {clientSignature.type === 'draw' ? (
-                                                <div className="relative border border-slate-200 rounded-xl bg-white overflow-hidden h-32 group">
-                                                    <canvas ref={clientCanvasRef} className="w-full h-full cursor-crosshair touch-none" onMouseDown={startClientDrawing} onMouseMove={drawClient} onMouseUp={stopClientDrawing} onMouseLeave={stopClientDrawing} onTouchStart={startClientDrawing} onTouchMove={drawClient} onTouchEnd={stopClientDrawing} />
-                                                    <button type="button" onClick={clearClientCanvas} className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Eraser size={14} /></button>
-                                                </div>
-                                                ) : (
-                                                <div onClick={() => clientFileInputRef.current.click()} className="border-2 border-dashed border-slate-300 rounded-xl h-32 flex flex-col items-center justify-center text-slate-400 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all"><Upload size={20} className="mb-2"/><span className="text-xs">Clique para carregar</span><input type="file" ref={clientFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setClientSignature)} /></div>
-                                                )}
-                                            </>
-                                            )}
+                                            <div className="flex justify-between items-center"> <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assinatura Cliente</label> <div className="flex items-center gap-2"><span className="text-xs text-slate-500">Incluir</span><div onClick={() => setClientSignature(p => ({...p, include: !p.include}))} className={`w-9 h-5 rounded-full p-0.5 cursor-pointer transition-colors ${clientSignature.include ? 'bg-orange-600' : 'bg-slate-300'}`}><div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-transform ${clientSignature.include ? 'translate-x-4' : 'translate-x-0'}`}></div></div></div> </div>
+                                            {clientSignature.include && ( <> <div className="flex rounded-lg border border-slate-200 p-1 bg-slate-50 mb-2"> <button type="button" onClick={() => setClientSignature(p => ({...p, type: 'draw'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${clientSignature.type === 'draw' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Desenhar</button> <button type="button" onClick={() => setClientSignature(p => ({...p, type: 'upload'}))} className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${clientSignature.type === 'upload' ? 'bg-white shadow text-orange-600' : 'text-slate-500'}`}>Upload</button> </div> {clientSignature.type === 'draw' ? ( <div className="relative border border-slate-200 rounded-xl bg-white overflow-hidden h-32 group"> <canvas ref={clientCanvasRef} className="w-full h-full cursor-crosshair touch-none" onMouseDown={startClientDrawing} onMouseMove={drawClient} onMouseUp={stopClientDrawing} onMouseLeave={stopClientDrawing} onTouchStart={startClientDrawing} onTouchMove={drawClient} onTouchEnd={stopClientDrawing} /> <button type="button" onClick={clearClientCanvas} className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full shadow-sm hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"><Eraser size={14} /></button> </div> ) : ( <div onClick={() => clientFileInputRef.current.click()} className="border-2 border-dashed border-slate-300 rounded-xl h-32 flex flex-col items-center justify-center text-slate-400 hover:border-orange-400 hover:bg-orange-50 cursor-pointer transition-all"><Upload size={20} className="mb-2"/><span className="text-xs">Clique para carregar</span><input type="file" ref={clientFileInputRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, setClientSignature)} /></div> )} </> )}
                                         </div>
                                     </EditorSection>
                                 </div>
@@ -1505,7 +976,6 @@
                                     </div>
 
                                     <div className="w-full h-full overflow-auto flex justify-center items-start custom-scrollbar">
-                                        {/* Reduzi o gap visual entre páginas de 20px para 10px */}
                                         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center', display: 'flex', flexDirection: 'column', gap: '10px', paddingBottom: '50px' }} className="print:transform-none print:gap-0 print:p-0">
                                             {pages.map((page) => (
                                                 <div key={page.pageIndex} className="receipt-page shadow-2xl bg-white relative flex flex-col print:shadow-none transition-colors duration-300"
@@ -1517,15 +987,12 @@
                                                             <div className="flex gap-5 items-center flex-1 pr-4">
                                                                 {company.logo && (<div className="flex-shrink-0" style={{ width: `${company.logoWidth}px` }}><img src={company.logo} alt="Logo" className="object-contain w-full" style={{ opacity: company.logoOpacity / 100, maxHeight: '100px' }} /></div>)}
                                                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                                    {/* Cabeçalho Uniformizado e Otimizado */}
                                                                     <h1 className="text-xl font-extrabold uppercase tracking-tight mb-2 leading-none">{company.name || 'NOME DA EMPRESA'}</h1>
-                                                                    
                                                                     <div className="flex flex-wrap gap-x-3 text-xs font-medium opacity-90 mb-2 items-center">
                                                                         {company.doc && <span className="bg-black/5 px-1.5 py-0.5 rounded">{company.docType}: {company.doc}</span>}
                                                                         {company.ie && <span>IE: {company.ie}</span>}
                                                                         {company.im && <span>IM: {company.im}</span>}
                                                                     </div>
-
                                                                     <div className="text-xs opacity-90 space-y-1">
                                                                         {company.address && <p className="leading-snug">{company.address}</p>}
                                                                         {(company.phone || company.email || company.website) && (
