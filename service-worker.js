@@ -1,10 +1,10 @@
-const CACHE_NAME = 'nexus-vendas-v2'; // Atualizado para v2 para garantir que os ícones sejam baixados
+const CACHE_NAME = 'nexus-vendas-v5-index-fix';
 const ASSETS_TO_CACHE = [
   './',
-  './index.html',
+  './index.html', // Renomeado de Nota de vendas.html para index.html
   './manifest.json',
-  './icon-192.png', // Deve corresponder exatamente ao nome do arquivo na pasta
-  './icon-512.png', // Deve corresponder exatamente ao nome do arquivo na pasta
+  './icon-192.png',
+  './icon-512.png',
   'https://cdn.tailwindcss.com',
   'https://unpkg.com/react@18/umd/react.production.min.js',
   'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
@@ -13,18 +13,16 @@ const ASSETS_TO_CACHE = [
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
 ];
 
-// Instalação
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
+    caches.open(CACHE_NAME).then((cache) => {
+      // Adiciona todos os recursos ao cache
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
   );
-  self.skipWaiting(); // Força o SW a ativar imediatamente
+  self.skipWaiting();
 });
 
-// Ativação e Limpeza
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keyList) => {
@@ -35,16 +33,19 @@ self.addEventListener('activate', (event) => {
       }));
     })
   );
-  self.clients.claim(); // Controla a página imediatamente
+  self.clients.claim();
 });
 
-// Fetch
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        return response || fetch(event.request);
-      })
+    caches.match(event.request).then((response) => {
+      // Retorna do cache se encontrado, senão faz a requisição na rede
+      return response || fetch(event.request).catch(() => {
+        // Fallback opcional para index.html se estiver offline e navegando
+        if (event.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+      });
+    })
   );
 });
-
