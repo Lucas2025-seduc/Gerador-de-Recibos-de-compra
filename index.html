@@ -69,7 +69,9 @@
             100% { transform: rotate(360deg); }
         }
         
-        body { overflow-y: auto; background-color: #f1f5f9; }
+        body { overflow-y: auto; background-color: #f1f5f9; user-select: none; -webkit-user-select: none; }
+        /* Permite seleção apenas em inputs */
+        input, textarea, [contenteditable] { user-select: text; -webkit-user-select: text; }
 
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -77,11 +79,93 @@
         .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased">
+<body class="bg-slate-100 text-slate-800 antialiased" oncontextmenu="return false;">
     <div id="root" class="w-full flex flex-col"></div>
 
     <script type="text/babel">
-        const { useState, useRef, useEffect, useMemo } = React;
+        const { useState, useRef, useEffect, useMemo, useCallback } = React;
+
+        // --- OFUSCAÇÃO DE LICENÇA (SECURITY LAYER) ---
+        // Variáveis renomeadas e lógica encapsulada para dificultar leitura
+        const _0x5f2a = "NEXUS_VENDAS_2025_SECURE_V2_X99_HASH_SALT_LUCAS"; 
+        
+        const _0xHashGen = (str) => {
+            let hash = 0;
+            if (str.length === 0) return hash;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16);
+        };
+
+        // --- INDEXED DB LAYER (STORAGE GRANDE CAPACIDADE) ---
+        const DB_NAME = "NexusAppDB_V2";
+        const DB_VERSION = 2; // Incremented for safety
+        const STORES = {
+            SETTINGS: 'settings',
+            PROFILES: 'profiles',
+            RECEIPTS: 'receipts',
+            IMAGES: 'images' // Dedicado para dados pesados
+        };
+
+        const dbHelper = {
+            open: () => {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains(STORES.SETTINGS)) db.createObjectStore(STORES.SETTINGS, { keyPath: 'key' });
+                        if (!db.objectStoreNames.contains(STORES.PROFILES)) db.createObjectStore(STORES.PROFILES, { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains(STORES.RECEIPTS)) db.createObjectStore(STORES.RECEIPTS, { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains(STORES.IMAGES)) db.createObjectStore(STORES.IMAGES, { keyPath: 'id' });
+                    };
+                    request.onsuccess = (event) => resolve(event.target.result);
+                    request.onerror = (event) => reject(event.target.error);
+                });
+            },
+            put: async (storeName, data) => {
+                const db = await dbHelper.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.put(data);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            get: async (storeName, key) => {
+                const db = await dbHelper.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(storeName, 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.get(key);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            getAll: async (storeName) => {
+                const db = await dbHelper.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(storeName, 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.getAll();
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+            delete: async (storeName, key) => {
+                const db = await dbHelper.open();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.delete(key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+        };
 
         // --- ICONS ---
         const IconBase = ({ children, size = 24, className = "", ...props }) => (
@@ -131,8 +215,6 @@
         const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
 
         // --- CONSTANTS ---
-        const APP_SECRET = "NEXUS_VENDAS_2025_SECRET_KEY_LucasSilva"; 
-        
         const FONTS = [
             { name: 'Moderna (Inter)', family: "'Inter', sans-serif" },
             { name: 'Corporativa (Roboto)', family: "'Roboto', sans-serif" },
@@ -180,19 +262,6 @@
         ];
 
         // --- UTILS (Funções de ajuda) ---
-        const generateLicenseHash = (deviceId) => {
-            try {
-                const rawString = deviceId + APP_SECRET;
-                let hash = 0;
-                for (let i = 0; i < rawString.length; i++) {
-                    const char = rawString.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash & hash; 
-                }
-                return Math.abs(hash).toString(16).substring(0, 8).toUpperCase();
-            } catch (e) { return "ERROR"; }
-        };
-
         const numeroPorExtenso = (v) => {
             v = Math.round(v * 100) / 100;
             if (v === 0) return 'Zero reais';
@@ -250,6 +319,16 @@
             };
             img.src = imageSrc;
         };
+        
+        // --- TOAST NOTIFICATION ---
+        const Toast = ({ message, type, onClose }) => {
+            useEffect(() => { const timer = setTimeout(onClose, 3000); return () => clearTimeout(timer); }, [onClose]);
+            return (
+                <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-white text-sm font-bold z-[100] animate-slide-in ${type === 'error' ? 'bg-red-500' : 'bg-slate-800'}`}>
+                    {type === 'error' ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />} {message}
+                </div>
+            );
+        };
 
         const InputGroup = ({ label, children }) => (
             <div className="space-y-1.5 w-full">
@@ -271,6 +350,20 @@
                 </div>
             </div>
         );
+        
+        // Modal de confirmação
+        const ConfirmModal = ({ message, onConfirm, onCancel }) => (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">Confirmação</h3>
+                    <p className="text-slate-600 mb-6 text-sm">{message}</p>
+                    <div className="flex gap-3 justify-end">
+                        <button onClick={onCancel} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors text-sm">Cancelar</button>
+                        <button onClick={onConfirm} className="px-4 py-2 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-lg transition-colors text-sm">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        );
 
         // --- APP COMPONENT ---
         function App() {
@@ -282,7 +375,13 @@
             const [deviceId, setDeviceId] = useState('');
             const [licenseKey, setLicenseKey] = useState('');
             const [isLicensed, setIsLicensed] = useState(false);
-            const [receiptCount, setReceiptCount] = useState(0);
+            const [licenseExpiryDate, setLicenseExpiryDate] = useState(null);
+            
+            // Controle de Tempo Gratuito
+            const [firstRunTime, setFirstRunTime] = useState(null);
+            const [isFreeExpired, setIsFreeExpired] = useState(false);
+            const FREE_LIMIT_MS = 3 * 60 * 60 * 1000; // 3 Horas
+
             const [savedReceipts, setSavedReceipts] = useState([]);
             const [showSettingsModal, setShowSettingsModal] = useState(false);
             const [inputLicense, setInputLicense] = useState('');
@@ -295,6 +394,8 @@
 
             const [profiles, setProfiles] = useState([]);
             const [activeProfileId, setActiveProfileId] = useState(null);
+            const [toast, setToast] = useState(null);
+            const [confirmDialog, setConfirmDialog] = useState(null);
 
             const [company, setCompany] = useState({
                 name: '', docType: 'CNPJ', doc: '',
@@ -331,7 +432,11 @@
 
             const penColor = design.themeId.includes('dark') || design.themeId === 'midnight' ? '#ffffff' : '#000000';
 
-            // ... (Canvas Logic Omited for brevity, it's standard)
+            const showToast = (msg, type = 'success') => setToast({ message: msg, type });
+            const closeToast = () => setToast(null);
+            const confirmAction = (msg, onConfirm) => setConfirmDialog({ message: msg, onConfirm: () => { onConfirm(); setConfirmDialog(null); }, onCancel: () => setConfirmDialog(null) });
+
+            // --- CANVAS LOGIC ---
             const setupCanvas = (canvas, color = '#000000') => {
                 const parent = canvas.parentElement;
                 if (!parent) return;
@@ -405,7 +510,6 @@
             const stopClientDrawing = () => stopDraw(clientCanvasRef, setClientSignature, setIsClientDrawing);
             const clearClientCanvas = () => clearCanvasFn(clientCanvasRef, setClientSignature);
 
-            // ... (Actions, Save/Load Profile, License logic similar to before)
             const addItem = () => setItems([...items, { id: Date.now(), description: '', qtd: 1, price: 0 }]);
             const updateItem = (id, field, value) => setItems(prevItems => prevItems.map(i => i.id === id ? { ...i, [field]: value } : i));
             const removeItem = (id) => setItems(prevItems => prevItems.filter(i => i.id !== id));
@@ -422,14 +526,14 @@
                 }
             };
 
-            const saveReceiptToHistory = (currentData) => {
+            const saveReceiptToHistory = async (currentData) => {
                 const newReceipt = { id: Date.now().toString(), createdAt: new Date().toISOString(), company: currentData.company, client: currentData.client, items: currentData.items, total: currentData.total, controlNumber: currentData.controlNumber };
                 const updatedHistory = [newReceipt, ...savedReceipts];
                 setSavedReceipts(updatedHistory);
-                localStorage.setItem('nexus_receipts_history', JSON.stringify(updatedHistory));
+                await dbHelper.put(STORES.RECEIPTS, newReceipt);
             };
 
-            const saveProfile = () => {
+            const saveProfile = async () => {
                 if (!company.name) {
                     showToast("Digite o nome da empresa para salvar.", "error");
                     return;
@@ -439,20 +543,23 @@
                 let newId = activeProfileId;
                 try {
                     if (activeProfileId) {
-                        updatedProfiles = profiles.map(p => p.id === activeProfileId ? { ...p, ...profileData, name: company.name, updatedAt: new Date().toISOString() } : p);
+                        const existing = profiles.find(p => p.id === activeProfileId);
+                        const updated = { ...existing, ...profileData, name: company.name, updatedAt: new Date().toISOString() };
+                        await dbHelper.put(STORES.PROFILES, updated);
+                        updatedProfiles = profiles.map(p => p.id === activeProfileId ? updated : p);
                         showToast("Perfil atualizado com sucesso!");
                     } else {
                         newId = Date.now().toString();
                         const newProfile = { id: newId, name: company.name, ...profileData, createdAt: new Date().toISOString() };
+                        await dbHelper.put(STORES.PROFILES, newProfile);
                         updatedProfiles = [...profiles, newProfile];
                         showToast("Nova empresa salva com sucesso!");
                     }
-                    localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setProfiles(updatedProfiles);
                     setActiveProfileId(newId);
                 } catch (e) {
-                    if (e.name === 'QuotaExceededError') showToast("Espaço cheio! Tente usar imagens menores ou apagar perfis antigos.", "error");
-                    else showToast("Erro ao salvar perfil.", "error");
+                    console.error(e);
+                    showToast("Erro ao salvar perfil no banco de dados.", "error");
                 }
             };
 
@@ -470,48 +577,76 @@
                 }
             };
 
-            const deleteProfile = () => {
+            const deleteProfile = async () => {
                 if (!activeProfileId) return;
-                confirmAction("Tem certeza que deseja excluir esta empresa salva?", () => {
+                confirmAction("Tem certeza que deseja excluir esta empresa salva?", async () => {
+                    await dbHelper.delete(STORES.PROFILES, activeProfileId);
                     const updatedProfiles = profiles.filter(p => p.id !== activeProfileId);
                     setProfiles(updatedProfiles);
-                    localStorage.setItem('nexus_company_profiles', JSON.stringify(updatedProfiles));
                     setActiveProfileId(null);
                     showToast("Perfil excluído.");
                 });
             };
 
-            const validateLicense = () => {
-                const expected = generateLicenseHash(deviceId);
-                if (inputLicense.trim().toUpperCase() === expected) {
-                    setIsLicensed(true);
-                    setLicenseKey(expected);
-                    localStorage.setItem('nexus_license_key', expected);
-                    setLicenseError('');
-                    showToast("Licença ativada com sucesso!");
-                } else {
-                    setLicenseError("Licença inválida para este dispositivo.");
+            // --- Lógica de Validação de Licença Atualizada ---
+            const validateLicense = async () => {
+                // Formato da Chave: HexTimestamp-Hash(DeviceID + HexTimestamp + Secret)
+                try {
+                    const parts = inputLicense.trim().split('-');
+                    if (parts.length !== 2) throw new Error("Formato inválido");
+                    
+                    const timestampHex = parts[0];
+                    const signature = parts[1].toUpperCase();
+                    
+                    const payload = deviceId + timestampHex + _0x5f2a;
+                    const expectedSig = _0xHashGen(payload).toUpperCase();
+
+                    if (signature === expectedSig) {
+                        const expiryMs = parseInt(timestampHex, 16);
+                        const now = Date.now();
+                        
+                        if (now < expiryMs) {
+                            setIsLicensed(true);
+                            setLicenseKey(inputLicense);
+                            setLicenseExpiryDate(new Date(expiryMs));
+                            
+                            await dbHelper.put(STORES.SETTINGS, { key: 'license_key', value: inputLicense });
+                            
+                            setLicenseError('');
+                            showToast("Licença ativada com sucesso!");
+                        } else {
+                            setLicenseError("Esta licença expirou.");
+                        }
+                    } else {
+                        setLicenseError("Licença inválida para este dispositivo.");
+                    }
+                } catch (e) {
+                    setLicenseError("Erro ao validar licença.");
                 }
             };
 
             const checkUsageLimit = () => {
-                if (isLicensed) return true;
-                if (receiptCount < 1) return true;
-                setShowSettingsModal(true);
-                return false;
-            };
-
-            const incrementUsage = () => {
-                const totalCalc = items.reduce((acc, i) => acc + (i.qtd * i.price), 0);
-                saveReceiptToHistory({ company, client, items, total: totalCalc, controlNumber });
-                if (!isLicensed) {
-                    const newCount = receiptCount + 1;
-                    setReceiptCount(newCount);
-                    localStorage.setItem('nexus_receipt_count', newCount.toString());
+                if (isLicensed) {
+                    const now = Date.now();
+                    if (licenseExpiryDate && now > licenseExpiryDate.getTime()) {
+                        setIsLicensed(false);
+                        showToast("Sua licença expirou.", "error");
+                        return false;
+                    }
+                    return true;
                 }
+                
+                // Modo Gratuito: 3 Horas
+                if (isFreeExpired) {
+                    setShowSettingsModal(true);
+                    showToast("Período gratuito de 3 horas expirado.", "error");
+                    return false;
+                }
+                
+                return true;
             };
 
-            const handlePrintAction = () => { if (checkUsageLimit()) { incrementUsage(); window.print(); } };
+            const handlePrintAction = () => { if (checkUsageLimit()) { window.print(); } };
             const handleSaveAction = () => { 
                 const totalCalc = items.reduce((acc, i) => acc + (i.qtd * i.price), 0); 
                 const discountVal = totalCalc * (discount / 100);
@@ -605,7 +740,7 @@
                     const sanitizedClientName = (client.name || 'Cliente').replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '').trim();
                     const fileName = `Recibo - ${sanitizedClientName}.pdf`;
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-                    incrementUsage(); 
+                    
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(pdfBlob);
                     link.download = fileName;
@@ -630,41 +765,153 @@
             };
 
             const applyTheme = (themeId) => { const theme = THEMES.find(t => t.id === themeId); if (theme) { setDesign(prev => ({ ...prev, themeId: theme.id, primaryColor: theme.primary, secondaryColor: theme.secondary, textColor: theme.text, backgroundColor: theme.bg, headerColor: theme.headerBg, headerTextColor: theme.headerText })); } };
-            const deleteReceipt = (id) => { confirmAction("Tem certeza que deseja excluir este recibo do histórico?", () => { const updated = savedReceipts.filter(r => r.id !== id); setSavedReceipts(updated); localStorage.setItem('nexus_receipts_history', JSON.stringify(updated)); showToast("Recibo excluído."); }); };
+            
+            const deleteReceipt = (id) => { 
+                confirmAction("Tem certeza que deseja excluir este recibo do histórico?", async () => { 
+                    await dbHelper.delete(STORES.RECEIPTS, id);
+                    const updated = savedReceipts.filter(r => r.id !== id); 
+                    setSavedReceipts(updated); 
+                    showToast("Recibo excluído."); 
+                }); 
+            };
+            
             const handleLoadReceipt = (receipt) => { confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => { setCompany(receipt.company); setClient(receipt.client); setItems(receipt.items); setControlNumber(receipt.controlNumber); setActiveTab('edit'); showToast("Recibo carregado."); }); };
-            const exportData = () => { const dataToExport = { deviceId, receiptCount, savedReceipts, company, profiles }; const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `nexus_backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url); };
-            const importData = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => { try { const imported = JSON.parse(ev.target.result); if (imported.savedReceipts) { setSavedReceipts(imported.savedReceipts); localStorage.setItem('nexus_receipts_history', JSON.stringify(imported.savedReceipts)); } if (imported.profiles) { setProfiles(imported.profiles); localStorage.setItem('nexus_company_profiles', JSON.stringify(imported.profiles)); } if (imported.company) setCompany(imported.company); showToast("Dados e empresas importados com sucesso!"); setShowSettingsModal(false); } catch(err) { showToast("Erro ao importar arquivo. Formato inválido.", "error"); } }; reader.readAsText(file); };
+            
+            // --- BACKUP E IMPORTAÇÃO COM INDEXEDDB ---
+            const exportData = async () => {
+                const settings = await dbHelper.getAll(STORES.SETTINGS);
+                const profilesList = await dbHelper.getAll(STORES.PROFILES);
+                const history = await dbHelper.getAll(STORES.RECEIPTS);
+                
+                const dataToExport = { deviceId, settings, profiles: profilesList, history };
+                const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `nexus_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            };
+
+            const importData = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const imported = JSON.parse(ev.target.result);
+                        
+                        if (imported.history && Array.isArray(imported.history)) {
+                            for (const item of imported.history) await dbHelper.put(STORES.RECEIPTS, item);
+                            const all = await dbHelper.getAll(STORES.RECEIPTS);
+                            setSavedReceipts(all);
+                        }
+                        
+                        if (imported.profiles && Array.isArray(imported.profiles)) {
+                            for (const item of imported.profiles) await dbHelper.put(STORES.PROFILES, item);
+                            const allProfiles = await dbHelper.getAll(STORES.PROFILES);
+                            setProfiles(allProfiles);
+                        }
+
+                        showToast("Dados importados com sucesso! O limite de armazenamento agora é de Gigabytes.");
+                        setShowSettingsModal(false);
+                    } catch(err) {
+                        showToast("Erro ao importar arquivo. Formato inválido.", "error");
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
             const getWhatsAppLink = () => { const text = `Olá, gostaria de comprar a licença do App Nexus Nota de Vendas.\n\nMeu ID de Dispositivo é: *${deviceId}*\n\nPor favor, aguardo o código de ativação.`; return `https://wa.me/558899361992?text=${encodeURIComponent(text)}`; };
             const getSocialIcon = (type, size = 10) => { switch(type) { case 'instagram': return <Instagram size={size} className="inline"/>; case 'facebook': return <Facebook size={size} className="inline"/>; default: return <Globe size={size} className="inline"/>; } };
 
+            // --- INITIALIZATION ---
             useEffect(() => {
-                const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
-                window.addEventListener('beforeinstallprompt', handler);
-                let storedId = localStorage.getItem('nexus_device_id');
-                if (!storedId) { storedId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10); localStorage.setItem('nexus_device_id', storedId.toUpperCase()); }
-                setDeviceId(storedId.toUpperCase());
-                const storedLicense = localStorage.getItem('nexus_license_key');
-                if (storedLicense && storedLicense === generateLicenseHash(storedId.toUpperCase())) { setIsLicensed(true); setLicenseKey(storedLicense); }
-                setReceiptCount(parseInt(localStorage.getItem('nexus_receipt_count') || '0'));
-                try { setSavedReceipts(JSON.parse(localStorage.getItem('nexus_receipts_history')) || []); } catch(e) {}
-                try {
-                    const savedProfiles = localStorage.getItem('nexus_company_profiles');
-                    let profilesList = [];
-                    if (savedProfiles) { profilesList = JSON.parse(savedProfiles); } else {
-                        const legacyProfile = localStorage.getItem('nexus_company_profile');
-                        if (legacyProfile) {
-                            const parsed = JSON.parse(legacyProfile);
-                            const newProfile = { id: Date.now().toString(), name: parsed.company?.name || 'Minha Empresa', ...parsed, createdAt: new Date().toISOString() };
-                            profilesList = [newProfile];
-                            localStorage.setItem('nexus_company_profiles', JSON.stringify(profilesList));
-                            setCompany(prev => ({ ...prev, ...parsed.company, date: new Date().toISOString().split('T')[0], time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) }));
-                            if(parsed.signature) setSignature(parsed.signature);
-                            if(parsed.design) setDesign(parsed.design);
-                            setActiveProfileId(newProfile.id);
+                const initApp = async () => {
+                    const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
+                    window.addEventListener('beforeinstallprompt', handler);
+
+                    // Device ID Logic
+                    let storedIdObj = await dbHelper.get(STORES.SETTINGS, 'device_id');
+                    let storedId = storedIdObj ? storedIdObj.value : null;
+                    
+                    if (!storedId) {
+                        storedId = localStorage.getItem('nexus_device_id'); // Migração legado
+                        if (!storedId) {
+                            storedId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
                         }
+                        await dbHelper.put(STORES.SETTINGS, { key: 'device_id', value: storedId.toUpperCase() });
                     }
+                    setDeviceId(storedId.toUpperCase());
+
+                    // License Logic
+                    let storedLicenseObj = await dbHelper.get(STORES.SETTINGS, 'license_key');
+                    let storedLicense = storedLicenseObj ? storedLicenseObj.value : null;
+
+                    if (storedLicense) {
+                         // Validar licença armazenada
+                         const parts = storedLicense.trim().split('-');
+                         if (parts.length === 2) {
+                             const timestampHex = parts[0];
+                             const signature = parts[1].toUpperCase();
+                             const payload = storedId.toUpperCase() + timestampHex + _0x5f2a;
+                             const expectedSig = _0xHashGen(payload).toUpperCase();
+                             
+                             if (signature === expectedSig) {
+                                 const expiryMs = parseInt(timestampHex, 16);
+                                 if (Date.now() < expiryMs) {
+                                     setIsLicensed(true);
+                                     setLicenseKey(storedLicense);
+                                     setLicenseExpiryDate(new Date(expiryMs));
+                                 }
+                             }
+                         }
+                    }
+
+                    // Free Time Logic (3 Horas)
+                    let firstRunObj = await dbHelper.get(STORES.SETTINGS, 'first_run_time');
+                    let firstRun = firstRunObj ? firstRunObj.value : null;
+                    
+                    if (!firstRun) {
+                        firstRun = Date.now();
+                        await dbHelper.put(STORES.SETTINGS, { key: 'first_run_time', value: firstRun });
+                    }
+                    setFirstRunTime(firstRun);
+                    
+                    if (Date.now() - firstRun > FREE_LIMIT_MS) {
+                        setIsFreeExpired(true);
+                    }
+
+                    // Load Data
+                    const history = await dbHelper.getAll(STORES.RECEIPTS);
+                    setSavedReceipts(history);
+                    
+                    const profilesList = await dbHelper.getAll(STORES.PROFILES);
                     setProfiles(profilesList);
-                } catch (e) {}
+
+                    // Load default/last company
+                    if (profilesList.length > 0) {
+                         const last = profilesList[profilesList.length - 1];
+                         setCompany(prev => ({...prev, ...last.company, date: new Date().toISOString().split('T')[0]}));
+                         if(last.signature) setSignature(last.signature);
+                         if(last.design) setDesign(last.design);
+                         setActiveProfileId(last.id);
+                    }
+
+                    // Intervalo para checar expiração do free mode
+                    const interval = setInterval(() => {
+                        if (firstRun && Date.now() - firstRun > FREE_LIMIT_MS) {
+                            setIsFreeExpired(true);
+                        }
+                    }, 60000);
+
+                    return () => { 
+                        window.removeEventListener('beforeinstallprompt', handler);
+                        clearInterval(interval);
+                    };
+                };
+
+                initApp();
 
                 const handleResize = () => {
                     if (window.innerWidth < 768) {
@@ -673,19 +920,20 @@
                     } else { setZoom(0.85); }
                 };
                 handleResize(); 
-                const resizeObserver = new ResizeObserver(() => {
-                     if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor);
-                     if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor);
-                });
                 window.addEventListener('resize', handleResize);
-                if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
-                    navigator.serviceWorker.register('./service-worker.js').catch(err => console.warn(err));
-                }
-                return () => { window.removeEventListener('resize', handleResize); window.removeEventListener('beforeinstallprompt', handler); resizeObserver.disconnect(); };
+                return () => window.removeEventListener('resize', handleResize);
             }, []);
 
-            useEffect(() => { const timeoutId = setTimeout(() => { if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor); }, 100); return () => clearTimeout(timeoutId); }, [activeTab, signature.type, penColor, layoutMode]);
-            useEffect(() => { const timeoutId = setTimeout(() => { if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor); }, 100); return () => clearTimeout(timeoutId); }, [activeTab, clientSignature.type, penColor, layoutMode]);
+            // Setup canvas
+            useEffect(() => { 
+                const setup = () => {
+                    if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor);
+                    if (activeTab === 'edit' && clientSignature.type === 'draw' && clientCanvasRef.current) setupCanvas(clientCanvasRef.current, penColor);
+                };
+                const timeoutId = setTimeout(setup, 100); 
+                return () => clearTimeout(timeoutId); 
+            }, [activeTab, signature.type, clientSignature.type, penColor, layoutMode]);
+
             useEffect(() => { if (editorRef.current) editorRef.current.scrollTop = 0; }, [layoutMode, activeTab]);
 
             const filteredReceipts = useMemo(() => {
@@ -698,14 +946,24 @@
                 if (filterPeriod === 'today') list = list.filter(r => new Date(r.createdAt) >= startOfDay);
                 if (filterPeriod === 'week') list = list.filter(r => new Date(r.createdAt) >= startOfWeek);
                 if (filterPeriod === 'month') list = list.filter(r => new Date(r.createdAt) >= startOfMonth);
-                return list;
+                return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             }, [savedReceipts, filterPeriod, searchQuery]);
 
             const filteredTotal = filteredReceipts.reduce((acc, r) => acc + (r.total || 0), 0);
             const subtotal = items.reduce((acc, i) => acc + (i.qtd * i.price), 0);
             const discountValue = subtotal * (discount / 100);
             const total = Math.max(0, subtotal - discountValue);
-            const remainingCredits = Math.max(0, 1 - receiptCount);
+            
+            // Calculo do tempo restante (Visual)
+            const getFreeTimeLeft = () => {
+                if (!firstRunTime) return "";
+                const elapsed = Date.now() - firstRunTime;
+                const remaining = FREE_LIMIT_MS - elapsed;
+                if (remaining <= 0) return "Expirado";
+                const minutes = Math.floor(remaining / 60000);
+                const hours = Math.floor(minutes / 60);
+                return `${hours}h ${minutes % 60}m restantes`;
+            };
 
             const pages = useMemo(() => {
                 const CHARS_PER_LINE = 38; const LINE_WEIGHT = 1; const MAX_WEIGHT_FIRST_PAGE = 20; const MAX_WEIGHT_OTHER_PAGE = 27; const FOOTER_WEIGHT = 11;
@@ -728,6 +986,9 @@
             return (
                 <div className={`bg-slate-100 font-sans text-slate-800 flex flex-col ${layoutMode === 'stack' || activeTab === 'history' ? 'min-h-[100dvh]' : 'min-h-[100dvh] lg:h-screen lg:overflow-hidden'}`}>
                     
+                    {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
+                    {confirmDialog && <ConfirmModal message={confirmDialog.message} onConfirm={confirmDialog.onConfirm} onCancel={confirmDialog.onCancel} />}
+
                     {isGeneratingPdf && ( <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-white"> <div className="loader mb-4"></div> <p className="text-lg font-bold animate-pulse">Gerando PDF...</p> <p className="text-sm text-slate-300">A preparar ficheiro</p> </div> )}
 
                     {showSettingsModal && (
@@ -737,14 +998,18 @@
                                 <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2"><Settings className="text-slate-600" /> Configurações & Licença</h2>
                                 <div className="mb-8 border-b border-slate-100 pb-6">
                                     <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">{isLicensed ? <CheckCircle2 className="text-green-500" size={16}/> : <Lock className="text-orange-500" size={16}/>} Status da Licença</h3>
-                                    {!isLicensed && (<div className="bg-orange-50 text-orange-800 p-3 rounded-lg text-sm mb-4 border border-orange-100">Você está usando a versão gratuita. Restam <strong>{remainingCredits}</strong> recibos.</div>)}
-                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4"><label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block">ID do Dispositivo</label><div className="flex gap-2"><code className="flex-1 bg-white border border-slate-300 rounded px-3 py-2 font-mono text-sm text-slate-700">{deviceId}</code><button type="button" onClick={() => copyToClipboard(deviceId)} className="p-2 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600" title="Copiar"><Copy size={16} /></button></div></div>
-                                    {!isLicensed && (<div className="space-y-3"><a href={getWhatsAppLink()} target="_blank" rel="noreferrer" className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors"><Smartphone size={16} /> Comprar Licença</a><div className="flex gap-2"><input type="text" placeholder="Chave de ativação" className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-sm outline-none" value={inputLicense} onChange={(e) => setInputLicense(e.target.value)} /><button type="button" onClick={validateLicense} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm">Ativar</button></div>{licenseError && <p className="text-xs text-red-500 font-medium">{licenseError}</p>}</div>)}
-                                    {isLicensed && <p className="text-green-600 font-medium text-sm">Produto ativado e licenciado para este dispositivo.</p>}
+                                    {!isLicensed && (
+                                        <div className={`p-3 rounded-lg text-sm mb-4 border ${isFreeExpired ? 'bg-red-50 text-red-800 border-red-100' : 'bg-orange-50 text-orange-800 border-orange-100'}`}>
+                                            {isFreeExpired ? <strong>Período gratuito encerrado. Ative para continuar.</strong> : <span>Modo Gratuito: <strong>{getFreeTimeLeft()}</strong></span>}
+                                        </div>
+                                    )}
+                                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-4"><label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1 block">ID do Dispositivo</label><div className="flex gap-2"><code className="flex-1 bg-white border border-slate-300 rounded px-3 py-2 font-mono text-sm text-slate-700 select-all">{deviceId}</code><button type="button" onClick={() => copyToClipboard(deviceId)} className="p-2 bg-white border border-slate-300 rounded hover:bg-slate-100 text-slate-600" title="Copiar"><Copy size={16} /></button></div></div>
+                                    {!isLicensed && (<div className="space-y-3"><a href={getWhatsAppLink()} target="_blank" rel="noreferrer" className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors"><Smartphone size={16} /> Comprar Licença</a><div className="flex gap-2"><input type="text" placeholder="Cole sua chave aqui..." className="flex-1 px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-lg font-mono text-xs outline-none" value={inputLicense} onChange={(e) => setInputLicense(e.target.value)} /><button type="button" onClick={validateLicense} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm">Ativar</button></div>{licenseError && <p className="text-xs text-red-500 font-medium">{licenseError}</p>}</div>)}
+                                    {isLicensed && <div className="text-green-600 font-medium text-sm bg-green-50 p-2 rounded border border-green-100">Produto ativado. Válido até: {licenseExpiryDate?.toLocaleDateString('pt-BR')}</div>}
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><Save className="text-blue-500" size={16}/> Backup e Restauração</h3>
-                                    <p className="text-xs text-slate-500 mb-4">Salve seus dados para não perder seus recibos se limpar o navegador.</p>
+                                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2"><Save className="text-blue-500" size={16}/> Backup (IndexedDB)</h3>
+                                    <p className="text-xs text-slate-500 mb-4">Seus dados agora são salvos na memória do dispositivo, sem limite de 5MB.</p>
                                     <div className="grid grid-cols-2 gap-3">
                                         <button type="button" onClick={exportData} className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-slate-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"><Download className="text-slate-400 group-hover:text-blue-500" size={24} /><span className="text-sm font-medium text-slate-700 group-hover:text-blue-700">Baixar Backup</span></button>
                                         <button type="button" onClick={() => fileInputImportRef.current.click()} className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-500 hover:bg-emerald-50 transition-all group"><Upload className="text-slate-400 group-hover:text-emerald-500" size={24} /><span className="text-sm font-medium text-slate-700 group-hover:text-emerald-700">Importar Dados</span><input type="file" ref={fileInputImportRef} className="hidden" accept=".json" onChange={importData} /></button>
@@ -763,7 +1028,7 @@
                             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
                                 <span className="text-xs font-medium text-indigo-700">Nota de Venda</span>
                                 <span className="hidden sm:inline text-slate-300">|</span>
-                                {!isLicensed ? ( <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${remainingCredits > 0 ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-red-50 text-red-700 border-red-200'}`}><Lock size={10} /><span>Restam: {remainingCredits} recibo(s)</span></div> ) : ( <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"><CheckCircle2 size={10} /><span>Licença Premium</span></div> )}
+                                {!isLicensed ? ( <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${isFreeExpired ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}><Lock size={10} /><span>{isFreeExpired ? 'Expirado' : getFreeTimeLeft()}</span></div> ) : ( <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"><CheckCircle2 size={10} /><span>Licença Premium</span></div> )}
                                 <span className="hidden sm:inline text-slate-300">|</span>
                                 {installPrompt && ( <> <button type="button" onClick={handleInstall} className="flex items-center gap-1 text-[10px] text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-full border border-indigo-600 font-bold transition-colors animate-pulse shadow-md" title="Instalar App Nexus"><Download size={12} /> Instalar App</button> <span className="hidden sm:inline text-slate-300">|</span> </> )}
                                 <button type="button" onClick={() => setShowSettingsModal(true)} className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-full border border-slate-200 font-bold transition-colors"><Settings size={10} /> Configurações</button>
@@ -779,10 +1044,10 @@
                                 <button type="button" onClick={() => setActiveTab('history')} className={`p-2 rounded-md transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-white shadow text-indigo-600' : 'text-slate-500'}`} title="Histórico"><History size={18}/><span className="text-xs font-bold hidden sm:inline">Histórico</span></button>
                             </div>
                             <div className="relative">
-                                <button type="button" onClick={() => isLicensed || receiptCount < 1 ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700"> {!isLicensed && receiptCount >= 1 ? <Lock size={14} className="text-orange-500"/> : <Share2 size={18} />} <span className="hidden sm:inline">Enviar</span> </button>
+                                <button type="button" onClick={() => isLicensed || !isFreeExpired ? setShowShareMenu(!showShareMenu) : setShowSettingsModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium text-sm border border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700"> {!isLicensed && isFreeExpired ? <Lock size={14} className="text-orange-500"/> : <Share2 size={18} />} <span className="hidden sm:inline">Enviar</span> </button>
                                 {showShareMenu && ( <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 p-2 z-50"> <div className="p-2 bg-yellow-50 rounded-lg text-xs text-yellow-700 mb-2 border border-yellow-100"> 1º O PDF será baixado.<br/>2º Anexe-o no App que abrir. </div> <button onClick={() => handleShareAction('whatsapp')} className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"> <div className="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center"><Smartphone size={16} /></div> WhatsApp </button> <button onClick={() => handleShareAction('email')} className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"> <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center"><Mail size={16} /></div> E-mail </button> <button onClick={() => handleShareAction('native')} className="w-full flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg text-sm text-slate-700 transition-colors text-left"> <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center"><Share2 size={16} /></div> Outros Apps </button> </div> )}
                             </div>
-                            <button type="button" onClick={handlePrintAction} className={`flex items-center gap-2 text-white px-5 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm ${!isLicensed && receiptCount >= 1 ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-800'}`}> {!isLicensed && receiptCount >= 1 ? <Lock size={18} /> : <Printer size={18} />}<span className="hidden sm:inline">Imprimir</span> </button>
+                            <button type="button" onClick={handlePrintAction} className={`flex items-center gap-2 text-white px-5 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg font-medium text-sm ${!isLicensed && isFreeExpired ? 'bg-orange-600 hover:bg-orange-700' : 'bg-slate-900 hover:bg-slate-800'}`}> {!isLicensed && isFreeExpired ? <Lock size={18} /> : <Printer size={18} />}<span className="hidden sm:inline">Imprimir</span> </button>
                         </div>
                         </div>
                     </header>
@@ -814,7 +1079,6 @@
                                 <div className={`${layoutMode === 'side' ? 'flex flex-col gap-6' : 'contents'}`}>
                                     <button type="button" onClick={handleSaveAction} className={`w-full py-3 bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${layoutMode === 'stack' ? 'lg:col-span-full' : ''}`}><Save size={18} /> Salvar dados no Histórico</button>
 
-                                    {/* EDITOR SECTIONS (OMITTED CONTENT FOR BREVITY, SAME AS BEFORE) */}
                                     <EditorSection title="Estética & Tema" icon={Palette} colorClass="bg-indigo-500" borderColorClass="border-indigo-500" className="h-fit">
                                         <div>
                                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 block">Paleta de Cores</label>
