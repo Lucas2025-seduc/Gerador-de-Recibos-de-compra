@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nexus - Nota de Vendas</title>
+    <title>Nexus - Gestão de Vendas & Orçamentos</title>
     
     <!-- PWA -->
     <link rel="manifest" href="./manifest.json">
@@ -70,7 +70,6 @@
         }
         
         body { overflow-y: auto; background-color: #f1f5f9; user-select: none; -webkit-user-select: none; }
-        /* Permite seleção apenas em inputs */
         input, textarea, [contenteditable] { user-select: text; -webkit-user-select: text; }
 
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
@@ -86,7 +85,6 @@
         const { useState, useRef, useEffect, useMemo, useCallback } = React;
 
         // --- OFUSCAÇÃO DE LICENÇA (SECURITY LAYER) ---
-        // Variáveis renomeadas e lógica encapsulada para dificultar leitura
         const _0x5f2a = "NEXUS_VENDAS_2025_SECURE_V2_X99_HASH_SALT_LUCAS"; 
         
         const _0xHashGen = (str) => {
@@ -100,14 +98,14 @@
             return Math.abs(hash).toString(16);
         };
 
-        // --- INDEXED DB LAYER (STORAGE GRANDE CAPACIDADE) ---
+        // --- INDEXED DB LAYER ---
         const DB_NAME = "NexusAppDB_V2";
-        const DB_VERSION = 2; // Incremented for safety
+        const DB_VERSION = 2; 
         const STORES = {
             SETTINGS: 'settings',
             PROFILES: 'profiles',
             RECEIPTS: 'receipts',
-            IMAGES: 'images' // Dedicado para dados pesados
+            IMAGES: 'images'
         };
 
         const dbHelper = {
@@ -213,6 +211,10 @@
         const Facebook = (props) => <IconBase {...props}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></IconBase>;
         const Instagram = (props) => <IconBase {...props}><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></IconBase>;
         const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
+        const Filter = (props) => <IconBase {...props}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></IconBase>;
+        const CalendarRange = (props) => <IconBase {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M17 14h-6"/><path d="M13 18H7"/><path d="M7 14h.01"/><path d="M17 18h.01"/></IconBase>;
+        const PieChart = (props) => <IconBase {...props}><path d="M21.21 15.89A10 10 0 1 1 8 2.83" /><path d="M22 12A10 10 0 0 0 12 2v10z" /></IconBase>;
+        const Tag = (props) => <IconBase {...props}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></IconBase>;
 
         // --- CONSTANTS ---
         const FONTS = [
@@ -241,16 +243,6 @@
             { id: 'royal', name: 'Dourado Real', primary: '#b45309', secondary: '#fffbeb', text: '#451a03', bg: '#ffffff', headerBg: '#fffbeb', headerText: '#78350f' },
             { id: 'mono', name: 'Monocromático', primary: '#000000', secondary: '#f4f4f5', text: '#18181b', bg: '#ffffff', headerBg: '#ffffff', headerText: '#000000' },
             { id: 'ocean', name: 'Oceano', primary: '#0891b2', secondary: '#ecfeff', text: '#164e63', bg: '#ffffff', headerBg: '#0891b2', headerText: '#ffffff' },
-            { id: 'graphite_dark', name: 'Grafite Moderno', primary: '#a1a1aa', secondary: '#27272a', text: '#f4f4f5', bg: '#18181b', headerBg: '#27272a', headerText: '#f4f4f5' },
-            { id: 'sand_warm', name: 'Areia Suave', primary: '#b45309', secondary: '#fef3c7', text: '#451a03', bg: '#fffbeb', headerBg: '#fef3c7', headerText: '#451a03' },
-            { id: 'lavender_soft', name: 'Lavanda', primary: '#7e22ce', secondary: '#f3e8ff', text: '#3b0764', bg: '#faf5ff', headerBg: '#f3e8ff', headerText: '#3b0764' },
-            { id: 'mint_fresh', name: 'Menta Fresca', primary: '#15803d', secondary: '#dcfce7', text: '#14532d', bg: '#f0fdf4', headerBg: '#dcfce7', headerText: '#14532d' },
-            { id: 'navy_night', name: 'Céu Noturno', primary: '#38bdf8', secondary: '#1e293b', text: '#f8fafc', bg: '#0f172a', headerBg: '#1e293b', headerText: '#f8fafc' },
-            { id: 'peach_bloom', name: 'Pêssego', primary: '#be123c', secondary: '#ffe4e6', text: '#881337', bg: '#fff1f2', headerBg: '#ffe4e6', headerText: '#881337' },
-            { id: 'coffee_dark', name: 'Café Expresso', primary: '#fbbf24', secondary: '#451a03', text: '#fffbeb', bg: '#2a1b12', headerBg: '#451a03', headerText: '#fffbeb' },
-            { id: 'concrete_urban', name: 'Concreto Urbano', primary: '#ea580c', secondary: '#d4d4d4', text: '#171717', bg: '#f5f5f5', headerBg: '#e5e5e5', headerText: '#171717' },
-            { id: 'lemon_zest', name: 'Limão Siciliano', primary: '#a16207', secondary: '#fef9c3', text: '#422006', bg: '#fefce8', headerBg: '#fef9c3', headerText: '#422006' },
-            { id: 'berry_deep', name: 'Ameixa Real', primary: '#e879f9', secondary: '#4c1d95', text: '#f3e8ff', bg: '#2e1065', headerBg: '#4c1d95', headerText: '#f3e8ff' },
         ];
 
         const FOOTER_PRESETS = [
@@ -261,7 +253,7 @@
             "Pagamento recebido. Este documento serve como quitação dos valores acima."
         ];
 
-        // --- UTILS (Funções de ajuda) ---
+        // --- UTILS ---
         const numeroPorExtenso = (v) => {
             v = Math.round(v * 100) / 100;
             if (v === 0) return 'Zero reais';
@@ -380,14 +372,19 @@
             // Controle de Tempo Gratuito
             const [firstRunTime, setFirstRunTime] = useState(null);
             const [isFreeExpired, setIsFreeExpired] = useState(false);
-            const FREE_LIMIT_MS = 3 * 60 * 60 * 1000; // 3 Horas
+            const FREE_LIMIT_MS = 3 * 60 * 60 * 1000;
 
             const [savedReceipts, setSavedReceipts] = useState([]);
             const [showSettingsModal, setShowSettingsModal] = useState(false);
             const [inputLicense, setInputLicense] = useState('');
             const [licenseError, setLicenseError] = useState('');
-            const [filterPeriod, setFilterPeriod] = useState('all');
+            
+            // Estados para Filtros Avançados
             const [searchQuery, setSearchQuery] = useState('');
+            const [filterDateStart, setFilterDateStart] = useState('');
+            const [filterDateEnd, setFilterDateEnd] = useState('');
+            const [filterDocType, setFilterDocType] = useState('all'); // all, receipt, quote
+
             const [isGeneratingPdf, setIsGeneratingPdf] = useState(false); 
             const [showShareMenu, setShowShareMenu] = useState(false); 
             const [discount, setDiscount] = useState(0);
@@ -397,6 +394,8 @@
             const [toast, setToast] = useState(null);
             const [confirmDialog, setConfirmDialog] = useState(null);
 
+            // --- State do Documento Atual ---
+            const [docType, setDocType] = useState('receipt'); // 'receipt' ou 'quote'
             const [company, setCompany] = useState({
                 name: '', docType: 'CNPJ', doc: '',
                 address: '', phone: '', email: '',
@@ -436,7 +435,7 @@
             const closeToast = () => setToast(null);
             const confirmAction = (msg, onConfirm) => setConfirmDialog({ message: msg, onConfirm: () => { onConfirm(); setConfirmDialog(null); }, onCancel: () => setConfirmDialog(null) });
 
-            // --- CANVAS LOGIC ---
+            // --- Canvas Utils ---
             const setupCanvas = (canvas, color = '#000000') => {
                 const parent = canvas.parentElement;
                 if (!parent) return;
@@ -527,12 +526,22 @@
             };
 
             const saveReceiptToHistory = async (currentData) => {
-                const newReceipt = { id: Date.now().toString(), createdAt: new Date().toISOString(), company: currentData.company, client: currentData.client, items: currentData.items, total: currentData.total, controlNumber: currentData.controlNumber };
+                const newReceipt = { 
+                    id: Date.now().toString(), 
+                    createdAt: new Date().toISOString(), 
+                    company: currentData.company, 
+                    client: currentData.client, 
+                    items: currentData.items, 
+                    total: currentData.total, 
+                    controlNumber: currentData.controlNumber,
+                    type: docType // Saves if it is 'receipt' or 'quote'
+                };
                 const updatedHistory = [newReceipt, ...savedReceipts];
                 setSavedReceipts(updatedHistory);
                 await dbHelper.put(STORES.RECEIPTS, newReceipt);
             };
 
+            // --- Gerenciamento de Perfil e Licença (Mantido) ---
             const saveProfile = async () => {
                 if (!company.name) {
                     showToast("Digite o nome da empresa para salvar.", "error");
@@ -588,30 +597,22 @@
                 });
             };
 
-            // --- Lógica de Validação de Licença Atualizada ---
             const validateLicense = async () => {
-                // Formato da Chave: HexTimestamp-Hash(DeviceID + HexTimestamp + Secret)
                 try {
                     const parts = inputLicense.trim().split('-');
                     if (parts.length !== 2) throw new Error("Formato inválido");
-                    
                     const timestampHex = parts[0];
                     const signature = parts[1].toUpperCase();
-                    
                     const payload = deviceId + timestampHex + _0x5f2a;
                     const expectedSig = _0xHashGen(payload).toUpperCase();
-
                     if (signature === expectedSig) {
                         const expiryMs = parseInt(timestampHex, 16);
                         const now = Date.now();
-                        
                         if (now < expiryMs) {
                             setIsLicensed(true);
                             setLicenseKey(inputLicense);
                             setLicenseExpiryDate(new Date(expiryMs));
-                            
                             await dbHelper.put(STORES.SETTINGS, { key: 'license_key', value: inputLicense });
-                            
                             setLicenseError('');
                             showToast("Licença ativada com sucesso!");
                         } else {
@@ -635,14 +636,11 @@
                     }
                     return true;
                 }
-                
-                // Modo Gratuito: 3 Horas
                 if (isFreeExpired) {
                     setShowSettingsModal(true);
                     showToast("Período gratuito de 3 horas expirado.", "error");
                     return false;
                 }
-                
                 return true;
             };
 
@@ -651,8 +649,8 @@
                 const totalCalc = items.reduce((acc, i) => acc + (i.qtd * i.price), 0); 
                 const discountVal = totalCalc * (discount / 100);
                 const finalTotal = Math.max(0, totalCalc - discountVal);
-                saveReceiptToHistory({ company, client, items, total: finalTotal, controlNumber }); 
-                showToast("Recibo salvo no histórico!"); 
+                saveReceiptToHistory({ company, client, items, total: finalTotal, controlNumber, type: docType }); 
+                showToast(`${docType === 'quote' ? 'Orçamento' : 'Recibo'} salvo no histórico!`); 
             };
             
             const handleInstall = async () => {
@@ -738,7 +736,8 @@
                         return;
                     }
                     const sanitizedClientName = (client.name || 'Cliente').replace(/[^a-zA-Z0-9À-ÿ\s-]/g, '').trim();
-                    const fileName = `Recibo - ${sanitizedClientName}.pdf`;
+                    const docLabel = docType === 'quote' ? 'Orçamento' : 'Recibo';
+                    const fileName = `${docLabel} - ${sanitizedClientName}.pdf`;
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
                     
                     const link = document.createElement('a');
@@ -748,17 +747,17 @@
                     if (method === 'whatsapp') {
                         let phone = client.phone.replace(/\D/g, '');
                         if (phone.length >= 10 && phone.length <= 11) phone = '55' + phone;
-                        const text = `Olá ${client.name || 'Cliente'}, segue em anexo o recibo de ${company.name}. Gratidão pela preferência e estamos à disposição!`;
+                        const text = `Olá ${client.name || 'Cliente'}, segue em anexo o ${docLabel.toLowerCase()} de ${company.name}. Gratidão pela preferência e estamos à disposição!`;
                         const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
                         if (preOpenedWindow) preOpenedWindow.location.href = url; else window.location.href = url;
                     } else if (method === 'email') {
-                        const subject = `Recibo - ${company.name}`;
-                        const body = `Olá ${client.name || 'Cliente'},\n\nSegue em anexo o recibo.\n\nAtenciosamente,\n${company.name}`;
+                        const subject = `${docLabel} - ${company.name}`;
+                        const body = `Olá ${client.name || 'Cliente'},\n\nSegue em anexo o ${docLabel.toLowerCase()}.\n\nAtenciosamente,\n${company.name}`;
                         const mailto = `mailto:${client.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                         if (preOpenedWindow) { preOpenedWindow.location.href = mailto; setTimeout(() => { if(!preOpenedWindow.closed) preOpenedWindow.close(); }, 2000); } else window.location.href = mailto;
                     } else if (method === 'native') {
                          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                            try { await navigator.share({ files: [file], title: 'Recibo', text: `Recibo de ${company.name}` }); } catch (err) { if (err.name !== 'AbortError') showToast("Erro na partilha nativa.", "error"); }
+                            try { await navigator.share({ files: [file], title: docLabel, text: `${docLabel} de ${company.name}` }); } catch (err) { if (err.name !== 'AbortError') showToast("Erro na partilha nativa.", "error"); }
                         } else showToast("Partilha nativa não suportada. Ficheiro descarregado.", "error");
                     }
                 } catch (error) { console.error("Erro:", error); showToast("Ocorreu um erro inesperado.", "error"); } finally { setIsGeneratingPdf(false); }
@@ -767,22 +766,20 @@
             const applyTheme = (themeId) => { const theme = THEMES.find(t => t.id === themeId); if (theme) { setDesign(prev => ({ ...prev, themeId: theme.id, primaryColor: theme.primary, secondaryColor: theme.secondary, textColor: theme.text, backgroundColor: theme.bg, headerColor: theme.headerBg, headerTextColor: theme.headerText })); } };
             
             const deleteReceipt = (id) => { 
-                confirmAction("Tem certeza que deseja excluir este recibo do histórico?", async () => { 
+                confirmAction("Tem certeza que deseja excluir este item do histórico?", async () => { 
                     await dbHelper.delete(STORES.RECEIPTS, id);
                     const updated = savedReceipts.filter(r => r.id !== id); 
                     setSavedReceipts(updated); 
-                    showToast("Recibo excluído."); 
+                    showToast("Item excluído."); 
                 }); 
             };
             
-            const handleLoadReceipt = (receipt) => { confirmAction("Carregar este recibo substituirá os dados atuais do editor. Continuar?", () => { setCompany(receipt.company); setClient(receipt.client); setItems(receipt.items); setControlNumber(receipt.controlNumber); setActiveTab('edit'); showToast("Recibo carregado."); }); };
+            const handleLoadReceipt = (receipt) => { confirmAction("Carregar este documento substituirá os dados atuais do editor. Continuar?", () => { setCompany(receipt.company); setClient(receipt.client); setItems(receipt.items); setControlNumber(receipt.controlNumber); setDocType(receipt.type || 'receipt'); setActiveTab('edit'); showToast("Documento carregado."); }); };
             
-            // --- BACKUP E IMPORTAÇÃO COM INDEXEDDB ---
             const exportData = async () => {
                 const settings = await dbHelper.getAll(STORES.SETTINGS);
                 const profilesList = await dbHelper.getAll(STORES.PROFILES);
                 const history = await dbHelper.getAll(STORES.RECEIPTS);
-                
                 const dataToExport = { deviceId, settings, profiles: profilesList, history };
                 const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -800,20 +797,17 @@
                 reader.onload = async (ev) => {
                     try {
                         const imported = JSON.parse(ev.target.result);
-                        
                         if (imported.history && Array.isArray(imported.history)) {
                             for (const item of imported.history) await dbHelper.put(STORES.RECEIPTS, item);
                             const all = await dbHelper.getAll(STORES.RECEIPTS);
                             setSavedReceipts(all);
                         }
-                        
                         if (imported.profiles && Array.isArray(imported.profiles)) {
                             for (const item of imported.profiles) await dbHelper.put(STORES.PROFILES, item);
                             const allProfiles = await dbHelper.getAll(STORES.PROFILES);
                             setProfiles(allProfiles);
                         }
-
-                        showToast("Dados importados com sucesso! O limite de armazenamento agora é de Gigabytes.");
+                        showToast("Dados importados com sucesso!");
                         setShowSettingsModal(false);
                     } catch(err) {
                         showToast("Erro ao importar arquivo. Formato inválido.", "error");
@@ -825,38 +819,63 @@
             const getWhatsAppLink = () => { const text = `Olá, gostaria de comprar a licença do App Nexus Nota de Vendas.\n\nMeu ID de Dispositivo é: *${deviceId}*\n\nPor favor, aguardo o código de ativação.`; return `https://wa.me/558899361992?text=${encodeURIComponent(text)}`; };
             const getSocialIcon = (type, size = 10) => { switch(type) { case 'instagram': return <Instagram size={size} className="inline"/>; case 'facebook': return <Facebook size={size} className="inline"/>; default: return <Globe size={size} className="inline"/>; } };
 
+            // --- DATE HELPERS ---
+            const setPeriod = (period) => {
+                const now = new Date();
+                let start = new Date();
+                let end = new Date();
+                
+                start.setHours(0,0,0,0);
+                end.setHours(23,59,59,999);
+
+                if (period === 'today') {
+                    // Já configurado
+                } else if (period === 'week') {
+                    start.setDate(now.getDate() - now.getDay()); // Domingo
+                    end.setDate(start.getDate() + 6); // Sábado
+                } else if (period === 'month') {
+                    start.setDate(1);
+                    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+                } else if (period === 'quarter') {
+                    const quarter = Math.floor(now.getMonth() / 3);
+                    start = new Date(now.getFullYear(), quarter * 3, 1);
+                    end = new Date(now.getFullYear(), start.getMonth() + 3, 0);
+                } else if (period === 'semester') {
+                    const semester = now.getMonth() < 6 ? 0 : 1;
+                    start = new Date(now.getFullYear(), semester * 6, 1);
+                    end = new Date(now.getFullYear(), start.getMonth() + 6, 0);
+                } else if (period === 'year') {
+                    start = new Date(now.getFullYear(), 0, 1);
+                    end = new Date(now.getFullYear(), 11, 31);
+                }
+
+                setFilterDateStart(start.toISOString().split('T')[0]);
+                setFilterDateEnd(end.toISOString().split('T')[0]);
+            };
+
             // --- INITIALIZATION ---
             useEffect(() => {
                 const initApp = async () => {
                     const handler = (e) => { e.preventDefault(); setInstallPrompt(e); };
                     window.addEventListener('beforeinstallprompt', handler);
 
-                    // Device ID Logic
                     let storedIdObj = await dbHelper.get(STORES.SETTINGS, 'device_id');
                     let storedId = storedIdObj ? storedIdObj.value : null;
-                    
                     if (!storedId) {
-                        storedId = localStorage.getItem('nexus_device_id'); // Migração legado
-                        if (!storedId) {
-                            storedId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
-                        }
+                        storedId = localStorage.getItem('nexus_device_id') || Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
                         await dbHelper.put(STORES.SETTINGS, { key: 'device_id', value: storedId.toUpperCase() });
                     }
                     setDeviceId(storedId.toUpperCase());
 
-                    // License Logic
                     let storedLicenseObj = await dbHelper.get(STORES.SETTINGS, 'license_key');
                     let storedLicense = storedLicenseObj ? storedLicenseObj.value : null;
-
                     if (storedLicense) {
-                         // Validar licença armazenada
                          const parts = storedLicense.trim().split('-');
                          if (parts.length === 2) {
                              const timestampHex = parts[0];
                              const signature = parts[1].toUpperCase();
                              const payload = storedId.toUpperCase() + timestampHex + _0x5f2a;
                              const expectedSig = _0xHashGen(payload).toUpperCase();
-                             
                              if (signature === expectedSig) {
                                  const expiryMs = parseInt(timestampHex, 16);
                                  if (Date.now() < expiryMs) {
@@ -868,28 +887,21 @@
                          }
                     }
 
-                    // Free Time Logic (3 Horas)
                     let firstRunObj = await dbHelper.get(STORES.SETTINGS, 'first_run_time');
                     let firstRun = firstRunObj ? firstRunObj.value : null;
-                    
                     if (!firstRun) {
                         firstRun = Date.now();
                         await dbHelper.put(STORES.SETTINGS, { key: 'first_run_time', value: firstRun });
                     }
                     setFirstRunTime(firstRun);
-                    
-                    if (Date.now() - firstRun > FREE_LIMIT_MS) {
-                        setIsFreeExpired(true);
-                    }
+                    if (Date.now() - firstRun > FREE_LIMIT_MS) { setIsFreeExpired(true); }
 
-                    // Load Data
                     const history = await dbHelper.getAll(STORES.RECEIPTS);
                     setSavedReceipts(history);
                     
                     const profilesList = await dbHelper.getAll(STORES.PROFILES);
                     setProfiles(profilesList);
 
-                    // Load default/last company
                     if (profilesList.length > 0) {
                          const last = profilesList[profilesList.length - 1];
                          setCompany(prev => ({...prev, ...last.company, date: new Date().toISOString().split('T')[0]}));
@@ -898,7 +910,6 @@
                          setActiveProfileId(last.id);
                     }
 
-                    // Intervalo para checar expiração do free mode
                     const interval = setInterval(() => {
                         if (firstRun && Date.now() - firstRun > FREE_LIMIT_MS) {
                             setIsFreeExpired(true);
@@ -924,7 +935,6 @@
                 return () => window.removeEventListener('resize', handleResize);
             }, []);
 
-            // Setup canvas
             useEffect(() => { 
                 const setup = () => {
                     if (activeTab === 'edit' && signature.type === 'draw' && canvasRef.current) setupCanvas(canvasRef.current, penColor);
@@ -936,25 +946,68 @@
 
             useEffect(() => { if (editorRef.current) editorRef.current.scrollTop = 0; }, [layoutMode, activeTab]);
 
+            // --- FILTRAGEM AVANÇADA ---
             const filteredReceipts = useMemo(() => {
-                const now = new Date();
-                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                const startOfWeek = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
-                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
                 let list = savedReceipts;
-                if (searchQuery) { const q = searchQuery.toLowerCase(); list = list.filter(r => r.client.name.toLowerCase().includes(q) || r.client.doc.includes(q) || r.client.email.toLowerCase().includes(q) || r.client.phone.includes(q)); }
-                if (filterPeriod === 'today') list = list.filter(r => new Date(r.createdAt) >= startOfDay);
-                if (filterPeriod === 'week') list = list.filter(r => new Date(r.createdAt) >= startOfWeek);
-                if (filterPeriod === 'month') list = list.filter(r => new Date(r.createdAt) >= startOfMonth);
-                return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            }, [savedReceipts, filterPeriod, searchQuery]);
+                
+                // 1. Busca Texto (Nome, CPF, WhatsApp, Email)
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    list = list.filter(r => 
+                        (r.client.name && r.client.name.toLowerCase().includes(q)) || 
+                        (r.client.doc && r.client.doc.includes(q)) || 
+                        (r.client.phone && r.client.phone.includes(q)) || 
+                        (r.client.email && r.client.email.toLowerCase().includes(q))
+                    );
+                }
 
-            const filteredTotal = filteredReceipts.reduce((acc, r) => acc + (r.total || 0), 0);
+                // 2. Filtro de Tipo (Recibo vs Orçamento)
+                if (filterDocType !== 'all') {
+                    list = list.filter(r => (r.type || 'receipt') === filterDocType);
+                }
+
+                // 3. Filtro de Data (Periodo)
+                if (filterDateStart) {
+                    const start = new Date(filterDateStart);
+                    start.setHours(0,0,0,0);
+                    // Usar createdAt para filtragem de banco de dados
+                    list = list.filter(r => new Date(r.createdAt) >= start);
+                }
+                if (filterDateEnd) {
+                    const end = new Date(filterDateEnd);
+                    end.setHours(23,59,59,999);
+                    list = list.filter(r => new Date(r.createdAt) <= end);
+                }
+
+                return list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            }, [savedReceipts, searchQuery, filterDocType, filterDateStart, filterDateEnd]);
+
+            // --- DASHBOARD TOTALS ---
+            const dashboardStats = useMemo(() => {
+                const stats = {
+                    totalReceipts: 0,
+                    countReceipts: 0,
+                    totalQuotes: 0,
+                    countQuotes: 0
+                };
+                filteredReceipts.forEach(r => {
+                    const isQuote = (r.type === 'quote');
+                    const val = r.total || 0;
+                    if (isQuote) {
+                        stats.totalQuotes += val;
+                        stats.countQuotes += 1;
+                    } else {
+                        stats.totalReceipts += val;
+                        stats.countReceipts += 1;
+                    }
+                });
+                return stats;
+            }, [filteredReceipts]);
+
             const subtotal = items.reduce((acc, i) => acc + (i.qtd * i.price), 0);
             const discountValue = subtotal * (discount / 100);
             const total = Math.max(0, subtotal - discountValue);
             
-            // Calculo do tempo restante (Visual)
             const getFreeTimeLeft = () => {
                 if (!firstRunTime) return "";
                 const elapsed = Date.now() - firstRunTime;
@@ -1030,7 +1083,6 @@
                                 <span className="hidden sm:inline text-slate-300">|</span>
                                 {!isLicensed ? ( <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${isFreeExpired ? 'bg-red-50 text-red-700 border-red-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}><Lock size={10} /><span>{isFreeExpired ? 'Expirado' : getFreeTimeLeft()}</span></div> ) : ( <div className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border bg-green-50 text-green-700 border-green-200"><CheckCircle2 size={10} /><span>Licença Premium</span></div> )}
                                 <span className="hidden sm:inline text-slate-300">|</span>
-                                {installPrompt && ( <> <button type="button" onClick={handleInstall} className="flex items-center gap-1 text-[10px] text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-full border border-indigo-600 font-bold transition-colors animate-pulse shadow-md" title="Instalar App Nexus"><Download size={12} /> Instalar App</button> <span className="hidden sm:inline text-slate-300">|</span> </> )}
                                 <button type="button" onClick={() => setShowSettingsModal(true)} className="flex items-center gap-1 text-[10px] text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-full border border-slate-200 font-bold transition-colors"><Settings size={10} /> Configurações</button>
                             </div>
                             </div>
@@ -1054,20 +1106,132 @@
 
                     <main className={`flex-1 max-w-[1600px] mx-auto w-full p-4 md:p-6 flex flex-col gap-6 ${layoutMode === 'side' && activeTab !== 'history' ? 'lg:flex-row lg:overflow-hidden' : 'lg:flex-col lg:h-auto'}`}>
                         {activeTab === 'history' && (
-                            <div className="w-full flex flex-col gap-6 h-full">
-                                <div className="flex items-center gap-4 pb-2 border-b border-slate-200">
-                                    <button type="button" onClick={() => setActiveTab('edit')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-300 hover:shadow-md transition-all font-bold text-sm shadow-sm"><ArrowLeft size={18} /> Voltar para o Editor</button>
-                                    <h2 className="text-xl font-bold text-slate-800">Histórico de Vendas</h2>
+                            <div className="w-full flex flex-col gap-6 h-full overflow-y-auto pb-20">
+                                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                                    <div className="flex items-center gap-4">
+                                        <button type="button" onClick={() => setActiveTab('edit')} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-indigo-600 hover:border-indigo-300 hover:shadow-md transition-all font-bold text-sm shadow-sm"><ArrowLeft size={18} /> Voltar</button>
+                                        <h2 className="text-xl font-bold text-slate-800">Dashboard & Histórico</h2>
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-medium hidden md:block">Gerenciamento completo</div>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4"> <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600"><FileText size={24} /></div> <div><p className="text-sm text-slate-500 font-medium">Recibos Encontrados</p><p className="text-2xl font-bold text-slate-800">{filteredReceipts.length}</p></div> </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4"> <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600"><DollarSign size={24} /></div> <div><p className="text-sm text-slate-500 font-medium">Total Filtrado</p><p className="text-2xl font-bold text-slate-800">{formatCurrency(filteredTotal)}</p></div> </div>
-                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-center gap-2"> <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buscar cliente, CPF, email..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div> <div className="flex gap-2"> <button type="button" onClick={() => setFilterPeriod('all')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Todos</button> <button type="button" onClick={() => setFilterPeriod('today')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'today' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Hoje</button> <button type="button" onClick={() => setFilterPeriod('week')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'week' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Semana</button> <button type="button" onClick={() => setFilterPeriod('month')} className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${filterPeriod === 'month' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Mês</button> </div> </div>
+                                
+                                {/* DASHBOARD CARDS */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                                        <div className="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform"><PieChart size={80} /></div>
+                                        <p className="text-sm text-slate-500 font-medium mb-1">Total de Vendas</p>
+                                        <p className="text-2xl font-bold text-indigo-600">{formatCurrency(dashboardStats.totalReceipts)}</p>
+                                        <p className="text-xs text-indigo-400 mt-1 font-medium">{dashboardStats.countReceipts} recibos emitidos</p>
+                                    </div>
+                                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                                        <div className="absolute right-0 top-0 opacity-5 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform"><FileText size={80} /></div>
+                                        <p className="text-sm text-slate-500 font-medium mb-1">Total de Orçamentos</p>
+                                        <p className="text-2xl font-bold text-purple-600">{formatCurrency(dashboardStats.totalQuotes)}</p>
+                                        <p className="text-xs text-purple-400 mt-1 font-medium">{dashboardStats.countQuotes} orçamentos criados</p>
+                                    </div>
+                                    <div className="bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-700 text-white relative overflow-hidden group col-span-1 md:col-span-2">
+                                        <div className="absolute right-0 top-0 opacity-10 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform"><DollarSign size={80} /></div>
+                                        <p className="text-sm text-slate-300 font-medium mb-1">Movimentação Total (Período)</p>
+                                        <div className="flex items-end gap-2">
+                                            <p className="text-3xl font-bold">{formatCurrency(dashboardStats.totalReceipts + dashboardStats.totalQuotes)}</p>
+                                            <span className="text-xs text-slate-400 mb-1.5">{filteredReceipts.length} documentos</span>
+                                        </div>
+                                    </div>
                                 </div>
+
+                                {/* FILTROS AVANÇADOS */}
+                                <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-center gap-2 text-slate-500 mb-1">
+                                            <Filter size={16} />
+                                            <span className="text-xs font-bold uppercase tracking-wider">Filtros de Busca</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                            {/* Busca Texto */}
+                                            <div className="md:col-span-4 relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                                <input className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Nome, CPF/CNPJ ou WhatsApp..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                                            </div>
+                                            {/* Tipo Documento */}
+                                            <div className="md:col-span-2">
+                                                <select value={filterDocType} onChange={(e) => setFilterDocType(e.target.value)} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-slate-600 font-medium">
+                                                    <option value="all">Todos os Tipos</option>
+                                                    <option value="receipt">Apenas Recibos</option>
+                                                    <option value="quote">Apenas Orçamentos</option>
+                                                </select>
+                                            </div>
+                                            {/* Data Inicio */}
+                                            <div className="md:col-span-3">
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><CalendarRange size={16} /></div>
+                                                    <input type="date" className="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-slate-600" value={filterDateStart} onChange={(e) => setFilterDateStart(e.target.value)} placeholder="De" />
+                                                </div>
+                                            </div>
+                                            {/* Data Fim */}
+                                            <div className="md:col-span-3">
+                                                <input type="date" className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 text-slate-600" value={filterDateEnd} onChange={(e) => setFilterDateEnd(e.target.value)} placeholder="Até" />
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Atalhos de Período */}
+                                        <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                                            <button onClick={() => { setFilterDateStart(''); setFilterDateEnd(''); }} className={`whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border ${!filterDateStart && !filterDateEnd ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>Tudo</button>
+                                            <button onClick={() => setPeriod('today')} className="whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600">Hoje</button>
+                                            <button onClick={() => setPeriod('week')} className="whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600">Semana</button>
+                                            <button onClick={() => setPeriod('month')} className="whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600">Mês</button>
+                                            <button onClick={() => setPeriod('quarter')} className="whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600">Trimestre</button>
+                                            <button onClick={() => setPeriod('semester')} className="whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600">Semestre</button>
+                                            <button onClick={() => setPeriod('year')} className="whitespace-nowrap px-3 py-1.5 rounded-md text-xs font-bold transition-colors border bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-indigo-600">Ano</button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col">
-                                    <div className="p-4 border-b border-slate-100 bg-slate-50 font-medium text-xs text-slate-500 uppercase tracking-wider flex"> <div className="w-24">Data</div><div className="w-20">Nº Ctrl</div><div className="flex-1">Cliente</div><div className="flex-1 hidden md:block">Contato</div><div className="w-32 text-right">Valor</div><div className="w-32 text-center">Ações</div> </div>
+                                    <div className="p-4 border-b border-slate-100 bg-slate-50 font-medium text-xs text-slate-500 uppercase tracking-wider flex"> 
+                                        <div className="w-24">Data</div>
+                                        <div className="w-20">Tipo</div>
+                                        <div className="flex-1">Cliente</div>
+                                        <div className="flex-1 hidden md:block">Contato</div>
+                                        <div className="w-32 text-right">Valor</div>
+                                        <div className="w-32 text-center">Ações</div> 
+                                    </div>
                                     <div className="overflow-y-auto flex-1 custom-scrollbar">
-                                        {filteredReceipts.length === 0 ? ( <div className="flex flex-col items-center justify-center h-64 text-slate-400"><List size={48} className="mb-2 opacity-20" /><p>Nenhum recibo encontrado.</p></div> ) : ( filteredReceipts.map(receipt => ( <div key={receipt.id} className="p-4 border-b border-slate-50 flex items-center hover:bg-slate-50 transition-colors text-sm"> <div className="w-24 text-slate-500">{new Date(receipt.createdAt).toLocaleDateString('pt-BR')}</div> <div className="w-20 font-mono text-slate-600">#{receipt.controlNumber}</div> <div className="flex-1 font-medium text-slate-800">{receipt.client.name}<div className="text-[10px] text-slate-400 font-normal">{receipt.client.doc}</div></div> <div className="flex-1 hidden md:block text-slate-500 text-xs"><div>{receipt.client.phone}</div><div>{receipt.client.email}</div></div> <div className="w-32 text-right font-bold text-slate-700">{formatCurrency(receipt.total)}</div> <div className="w-32 flex justify-center gap-2"> <button type="button" onClick={() => handleLoadReceipt(receipt)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md" title="Carregar"><PenTool size={16} /></button> <button type="button" onClick={() => deleteReceipt(receipt.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Excluir"><Trash2 size={16} /></button> </div> </div> )) )}
+                                        {filteredReceipts.length === 0 ? ( 
+                                            <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                                                <List size={48} className="mb-2 opacity-20" />
+                                                <p>Nenhum documento encontrado.</p>
+                                            </div> 
+                                        ) : ( 
+                                            filteredReceipts.map(receipt => ( 
+                                                <div key={receipt.id} className="p-4 border-b border-slate-50 flex items-center hover:bg-slate-50 transition-colors text-sm group"> 
+                                                    <div className="w-24 text-slate-500 text-xs">
+                                                        <div>{new Date(receipt.createdAt).toLocaleDateString('pt-BR')}</div>
+                                                        <div className="text-[10px] opacity-60">{new Date(receipt.createdAt).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</div>
+                                                    </div> 
+                                                    <div className="w-20">
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border ${receipt.type === 'quote' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>
+                                                            {receipt.type === 'quote' ? 'Orç.' : 'Rec.'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex-1 font-medium text-slate-800">
+                                                        {receipt.client.name}
+                                                        <div className="text-[10px] text-slate-400 font-normal flex gap-2">
+                                                            {receipt.client.doc && <span>{receipt.client.doc}</span>}
+                                                            <span className="opacity-50">#{receipt.controlNumber}</span>
+                                                        </div>
+                                                    </div> 
+                                                    <div className="flex-1 hidden md:block text-slate-500 text-xs">
+                                                        <div className="flex items-center gap-1"><Smartphone size={10}/> {receipt.client.phone}</div>
+                                                        <div className="flex items-center gap-1 truncate max-w-[150px]"><Mail size={10}/> {receipt.client.email}</div>
+                                                    </div> 
+                                                    <div className="w-32 text-right font-bold text-slate-700">{formatCurrency(receipt.total)}</div> 
+                                                    <div className="w-32 flex justify-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity"> 
+                                                        <button type="button" onClick={() => handleLoadReceipt(receipt)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md" title="Carregar/Editar"><PenTool size={16} /></button> 
+                                                        <button type="button" onClick={() => deleteReceipt(receipt.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Excluir"><Trash2 size={16} /></button> 
+                                                    </div> 
+                                                </div> 
+                                            )) 
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1077,7 +1241,22 @@
                             <>
                                 <div ref={editorRef} className={`flex-shrink-0 flex flex-col gap-6 print:hidden ${activeTab === 'preview' ? 'hidden lg:flex' : 'flex'} ${layoutMode === 'side' ? 'lg:w-[450px] lg:h-full lg:overflow-y-auto custom-scrollbar pr-2' : 'w-full lg:grid lg:grid-cols-2 xl:grid-cols-3 lg:items-start'}`}>
                                 <div className={`${layoutMode === 'side' ? 'flex flex-col gap-6' : 'contents'}`}>
-                                    <button type="button" onClick={handleSaveAction} className={`w-full py-3 bg-white border-2 border-slate-200 hover:border-indigo-500 hover:text-indigo-600 text-slate-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${layoutMode === 'stack' ? 'lg:col-span-full' : ''}`}><Save size={18} /> Salvar dados no Histórico</button>
+                                    
+                                    {/* SELETOR DE TIPO E BOTÃO SALVAR */}
+                                    <div className={`flex flex-col gap-3 ${layoutMode === 'stack' ? 'lg:col-span-full' : ''}`}>
+                                        <div className="bg-white p-1.5 rounded-xl border border-slate-200 flex shadow-sm">
+                                            <button onClick={() => setDocType('receipt')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${docType === 'receipt' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                                <FileText size={16}/> Recibo / Venda
+                                            </button>
+                                            <button onClick={() => setDocType('quote')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${docType === 'quote' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}>
+                                                <PieChart size={16}/> Orçamento
+                                            </button>
+                                        </div>
+                                        <button type="button" onClick={handleSaveAction} className={`w-full py-3 bg-white border-2 border-slate-200 hover:border-green-500 hover:text-green-600 text-slate-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm`}>
+                                            <Save size={18} /> 
+                                            Salvar {docType === 'quote' ? 'Orçamento' : 'Recibo'} no Histórico
+                                        </button>
+                                    </div>
 
                                     <EditorSection title="Estética & Tema" icon={Palette} colorClass="bg-indigo-500" borderColorClass="border-indigo-500" className="h-fit">
                                         <div>
@@ -1274,7 +1453,9 @@
                                                                 </div>
                                                             </div>
                                                             <div className="text-right flex-shrink-0 flex flex-col items-end pl-2">
-                                                                <div className="px-3 py-1 rounded text-xs font-bold tracking-widest uppercase mb-2" style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}>Recibo</div>
+                                                                <div className={`px-3 py-1 rounded text-xs font-bold tracking-widest uppercase mb-2 ${docType === 'quote' ? 'bg-purple-900/20 text-purple-900' : 'bg-black/10'}`}>
+                                                                    {docType === 'quote' ? 'ORÇAMENTO' : 'RECIBO'}
+                                                                </div>
                                                                 <div className="text-right">
                                                                     <p className="text-[9px] uppercase opacity-60 tracking-wider font-bold mb-0.5">Emissão</p>
                                                                     <p className="text-xs font-bold break-words max-w-[150px] leading-tight">
